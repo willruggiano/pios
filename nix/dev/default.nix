@@ -35,6 +35,7 @@
           namespace-cli # TODO: move to packages/devctl once it exists
           nodejs
           patch
+          prettier
           procps
           python3
           ripgrep

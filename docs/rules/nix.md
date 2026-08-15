@@ -4,61 +4,46 @@ paths:
   - ".agents/bin/*.sh"
 ---
 
-# Nix setup
+# Nix
 
-Nix is the single source of truth for tooling: it pins the Rust toolchain,
-builds the `lt` package, and provisions the devshell that every other workflow
-runs inside. See [[contributing.md]] for the strictness posture these gates
-enforce.
+Nix is the single source of truth for tool versions and development-shell
+provisioning. Agent command invocation is defined in
+[[contributing.md#Development Environment]]. Nix modules MUST provision that
+direct command interface, not an alternate wrapper workflow.
 
-## Module layout
+## Module Layout
 
-`flake.nix` is a [flake-parts](https://flake.parts) tree:
+`flake.nix` is a [flake-parts](https://flake.parts) tree with these
+repository-wide modules:
 
 ```text
 flake.nix
-└─ imports
-   ├─ nix/jailed.nix     jail.nix wrapper plumbing
-   ├─ nix/formatter.nix  treefmt -> `nix fmt`
-   ├─ nix/packages/      development-specific packages
-   ├─ nix/checks/        repository wide checks and nix tests
-   └─ nix/devshell.nix   development and ci environments
+└── imports
+    ├── nix/jailed.nix
+    ├── nix/formatter.nix
+    ├── nix/checks/
+    └── nix/dev/
+        └── pi/
 ```
 
-## Devshell provisioning
+Package derivations belong in `packages/<name>/default.nix`, as defined in
+[[contributing.md#Package Layout]]. Modules under `nix/` provide only
+repository-wide checks, formatting, development shells, and jail support.
 
-- `make check` and CI run inside `nix develop .#lt`.
-- On Anthropic-managed remote sessions (no Nix), `.claude/bin/setup.sh`
-  bootstraps it:
-  - **install** — determinate-nix, daemonless (`--init none`); the VM has no
-    PID-1 init.
-  - **start daemon** — `nohup nix-daemon`; not in the filesystem snapshot, so it
-    runs every session.
-  - **capture env** — `nix print-dev-env .#lt >> $CLAUDE_ENV_FILE`; every agent
-    shell then runs inside the devshell toolchain.
-- Idempotent and a no-op outside `CLAUDE_CODE_REMOTE=true`, so it serves as both
-  the cloud "Setup script" and a `SessionStart` hook.
-- `.claude/bin/install-pre-commit.sh` runs as a second `SessionStart` step,
-  after `setup.sh`, so agents commit through the same hooks CI enforces.
-  `nix print-dev-env` captures the env but does not run the devshell `startup`
-  scripts, so the `install-git-hooks` startup never fires on that path; the
-  script runs `nix run .#install-pre-commit` (the `installationScript`, exposed
-  as a package so it does not drag in the devshell's other inputs) instead.
+## Development Shell
 
-## cargo-deny git proxy
+The default development shell supplies the tools used by Makefiles, hooks, and
+coding agents. If a required executable is absent, add it to the appropriate
+development-shell module; do not substitute an unpinned tool.
 
-- `cargo deny check` clones `rustsec/advisory-db` to fetch the RustSec advisory
-  database.
-- The repo-scoped git proxy in remote sessions injects global/system git config
-  (proxy and `url.*.insteadOf` rewrites) that 403s the clone.
-- The `Makefile` runs the gate as
-  `GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null cargo deny check`, so
-  global/system git config is ignored for that step only and the clone goes
-  direct.
+`.envrc` loads the default shell for interactive work. Agent bootstrap code may
+install Nix and materialize the shell before the agent starts; those bootstrap
+operations are environment provisioning, not the command interface agents use
+while working.
 
-## Binary cache
+## Checks and Formatting
 
-- `flake.nix` declares the `lt.cachix.org` substituter via `nixConfig`.
-- CI pushes to it (`cachix-action`).
-- `setup.sh` and CI pass `accept-flake-config = true` so builds pull from the
-  cache without prompting.
+`nix/checks/` defines repository-wide flake checks and pre-commit hooks.
+`nix/formatter.nix` defines the treefmt wrapper. Keep check configuration in the
+owning module and expose the corresponding executable in the development shell
+when developers or agents must run it directly.

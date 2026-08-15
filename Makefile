@@ -11,7 +11,7 @@ build: ## Build the binary
 	@echo "not yet implemented"
 
 check: ## Run formatter, linter, supply-chain, and dedup gates
-	@echo "not yet implemented"
+	@pre-commit run --all-files
 
 test: ## Run the test suite
 	@echo "not yet implemented"

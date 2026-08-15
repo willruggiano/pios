@@ -416,21 +416,27 @@ A Rust core MAY be introduced only if profiling shows a sustained bottleneck
 that cannot be fixed in Swift, or if a future Android client creates genuinely
 shared reducer/protocol logic.
 
-### 7.2 Swift package boundaries
+### 7.2 Swift module boundaries
+
+The iOS implementation uses the `PiMobileCore` and `PiMobileApple` local Swift
+packages defined in [[contributing.md#Repository Layout]]. Their module
+boundaries are:
 
 ```text
 PiMobileApp
-├── AppShell                 navigation, scenes, deep links
-├── HostFeature              pairing, host list, health
-├── SessionListFeature       durable metadata and filters
-├── SessionFeature           transcript, composer, controls
-├── SessionDomain            pure value types and reducer
-├── MobileProtocol           generated SwiftProtobuf types
-├── RemoteTransport          WSS actor, correlation, reconnect
-├── Persistence              Core Data cache and migrations
-├── MarkdownRendering        AST cache and native views
-├── Security                 Keychain, local authentication, trust
-└── TestSupport              fixtures, fake clocks/transports
+├── PiMobileApple
+│   ├── AppShell                 navigation, scenes, deep links
+│   ├── HostFeature              pairing, host list, health
+│   ├── SessionListFeature       durable metadata and filters
+│   ├── SessionFeature           transcript, composer, controls
+│   ├── RemoteTransport          WSS actor, correlation, reconnect
+│   ├── Persistence              Core Data cache and migrations
+│   ├── MarkdownRendering        AST cache and native views
+│   └── Security                 Keychain, local authentication, trust
+├── PiMobileCore
+│   ├── SessionDomain            pure value types and reducer
+│   └── MobileProtocol           generated SwiftProtobuf types and mappings
+└── TestSupport                  fixtures, fake clocks/transports
 ```
 
 Feature modules depend inward on `SessionDomain`; they do not depend directly on
@@ -685,9 +691,9 @@ requires explicit review for any schema, event, lifecycle, or error-code change.
 The experimental protocol's stated absence of compatibility guarantees makes
 this a release requirement. [PI-084-PROTOCOL] [PI-DEV-PROTOCOL]
 
-## 13. Delivery sequence
+## 13. Delivery tasks
 
-### Phase 0 — establish the real server contract
+### Task 0 — establish the real server contract
 
 1. Decide whether the prototype pins published 0.84.1 or contributes to the
    replacement `dev` protocol.
@@ -698,11 +704,11 @@ this a release requirement. [PI-084-PROTOCOL] [PI-DEV-PROTOCOL]
 4. Make the local terminal TUI a client of the server-owned Harness, or
    implement an explicit handoff path.
 
-This phase is blocking for the product promise. The current `dev` server can
-list and attach only, and its demo Harness is merely a close-capable session
-owner pending remote Harness methods. [PI-DEV-PROTOCOL] [PI-DEV-RUNTIME]
+This task is blocking for the product promise. The current `dev` server can list
+and attach only, and its demo Harness is merely a close-capable session owner
+pending remote Harness methods. [PI-DEV-PROTOCOL] [PI-DEV-RUNTIME]
 
-### Phase 1 — local-network read/control prototype
+### Task 1 — local-network read/control prototype
 
 - Implement `Pi084Driver` or the newly completed `PiHarnessDriver`.
 - Implement gateway WSS, pairing, capabilities, snapshots, progress, and
@@ -712,7 +718,7 @@ owner pending remote Harness methods. [PI-DEV-PROTOCOL] [PI-DEV-RUNTIME]
   authenticated reverse proxy.
 - No APNs or public relay yet.
 
-### Phase 2 — production hardening
+### Task 2 — production hardening
 
 - Add device revocation, certificate continuity, rate/size limits, encrypted
   cache retention, diagnostics, full conformance/chaos tests, and
@@ -721,13 +727,13 @@ owner pending remote Harness methods. [PI-DEV-PROTOCOL] [PI-DEV-RUNTIME]
 - Ship TestFlight only after server restarts, ambiguous mutation delivery, and
   Pi-version downgrade behavior are verified.
 
-### Phase 3 — optional outbound relay
+### Task 3 — optional outbound relay
 
 If zero-inbound-port setup becomes a product requirement, add an opaque relay
 through which both the host gateway and iOS app make outbound TLS connections.
 Anthropic's documented Remote Control uses outbound HTTPS from the local process
 and routes the mobile/browser connection through its API, which is the reference
-topology for this later phase. [CLAUDE-REMOTE]
+topology for this later task. [CLAUDE-REMOTE]
 
 The relay MUST not become the agent runtime or filesystem owner. End-to-end
 payload encryption, multi-device routing, replay protection, offline

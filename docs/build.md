@@ -38,8 +38,9 @@ flowchart LR
 
 The NixOS machine remains the control plane and source of truth. A single
 command issued there MUST create a time-limited remote Mac, send an exact source
-revision, run the Apple-only build and test stages, retrieve the results, and
-destroy the instance. No Mac ownership and no hosted Git provider are required.
+revision, run the Apple-only build and test operations, retrieve the results,
+and destroy the instance. No Mac ownership and no hosted Git provider are
+required.
 
 Namespace is suitable for this role. Its documented macOS compute runs natively
 on Apple M4 Pro or M5 Max, supports Xcode/iOS builds and tests, provides
@@ -56,7 +57,7 @@ There are two limitations to make explicit:
    images. The selectors do not document an exact Xcode patch/build pin.
    [NS-MACOS] Every instance MUST therefore be inspected after creation and
    destroyed immediately if its Xcode build, SDK, Swift compiler, macOS version,
-   or simulator runtime differs from `Config/Toolchain.env`.
+   or simulator runtime differs from `packages/ios/Config/Toolchain.env`.
 2. The reviewed Namespace macOS/connection documentation exposes VNC, private
    SSH, and simulator-oriented iOS build/test support, but documents no
    USB-device passthrough from a NixOS workstation. [NS-MACOS] [NS-SSH] This
@@ -121,7 +122,7 @@ every build MUST also work from an empty cache. [NS-CACHE]
 
 ### 2.2 Provider qualification and fallback
 
-Namespace is the canonical provider, subject to a one-time M0 qualification run
+Namespace is the canonical provider, subject to a one-time Task M0 qualification
 that proves the selected image can:
 
 - boot and pass the exact toolchain doctor;
@@ -143,70 +144,9 @@ development environment. [APPLE-XCODE-CLOUD]
 
 ## 3. Repository contract from the first commit
 
-The repository MUST converge on this layout:
-
-```text
-.
-├── architecture.md
-├── build.md
-├── flake.nix
-├── flake.lock
-├── Justfile
-├── Config/
-│   ├── Toolchain.env
-│   ├── Base.xcconfig
-│   ├── Debug.xcconfig
-│   ├── Release.xcconfig
-│   ├── namespace.toml
-│   ├── ExportOptions-Local.plist
-│   └── ExportOptions-TestFlight.plist
-├── protocol/
-│   ├── pi_mobile.proto
-│   ├── buf.yaml
-│   └── fixtures/
-├── gateway/
-│   ├── package.json
-│   ├── package-lock.json
-│   ├── src/
-│   └── test/
-├── ios/
-│   ├── PiMobile.xcodeproj/
-│   │   └── xcshareddata/
-│   ├── PiMobileApp/
-│   ├── Packages/
-│   │   ├── PiMobileCore/
-│   │   └── PiMobileApple/
-│   ├── TestPlans/
-│   │   ├── PullRequest.xctestplan
-│   │   ├── UI.xctestplan
-│   │   ├── Performance.xctestplan
-│   │   └── TestFlightDeviceChecklist.md
-│   └── Tests/
-├── upstream/
-│   └── pi.lock.json
-├── tools/
-│   └── devctl/
-│       ├── go.mod
-│       ├── go.sum
-│       ├── cmd/
-│       │   ├── pimobile-devctl/
-│       │   └── pimobile-remote/
-│       └── internal/
-│           ├── config/
-│           ├── namespace/
-│           ├── state/
-│           ├── transfer/
-│           └── workflow/
-├── scripts/
-│   ├── doctor
-│   ├── remote-operation
-│   ├── build-ios
-│   ├── test-ios
-│   ├── archive-ios
-│   ├── upload-testflight
-│   └── write-build-manifest
-└── artifacts/                 # ignored; never source input
-```
+The canonical repository and package layout is defined in
+[[contributing.md#Repository Layout]]. Build configuration, tests, scripts,
+locks, and output remain in the package that owns them.
 
 `pimobile-devctl` is the Linux controller. `pimobile-remote` is a small,
 statically linked `darwin/arm64` helper built from the same Go module and
@@ -231,19 +171,20 @@ Core Data, Keychain, SwiftUI, local authentication, notifications, and other
 Apple-framework adapters. Linux success covers only `PiMobileCore`; the complete
 app is always compiled and tested with Xcode.
 
-`protocol/pi_mobile.proto` is the sole editable wire definition. Generated Swift
-and TypeScript sources MUST be committed so an Xcode build does not download or
-bootstrap code generators. `just generate` regenerates both outputs using
-Nix-pinned tools, and `just check-generated` fails when regeneration changes the
-tree. Swift Package Manager can build and test packages on supported platforms,
+`packages/protocol/pi_mobile.proto` is the sole editable wire definition.
+Generated Swift and TypeScript sources MUST be committed so an Xcode build does
+not download or bootstrap code generators. `make -C packages/protocol generate`
+regenerates both outputs using Nix-pinned tools, and
+`make -C packages/protocol check` fails when regeneration changes the tree.
+Swift Package Manager can build and test packages on supported platforms,
 including through `swift test`. [SWIFTPM]
 
 The gateway remains a TypeScript/Node application as chosen in
 [[architecture.md]]. `package-lock.json` MUST be committed and production
 packaging MUST use `npm ci`, never an unconstrained install. Each Pi driver pin
 records the exact upstream commit, package versions, source hash, and protocol
-fixture version in `upstream/pi.lock.json`; branch names such as `main` or `dev`
-are never build inputs.
+fixture version in `packages/gateway/upstream/pi.lock.json`; branch names such
+as `main` or `dev` are never build inputs.
 
 ## 4. Reproducibility model
 
@@ -280,7 +221,7 @@ apps.<system>.devctl
 
 The development shell pins Go, Node, npm, Swift for Linux-side package tests,
 `buf`, `protoc`, the Swift and TypeScript Protobuf generators, formatters,
-linters, `just`, Git, the official open-source `nsc` client, and
+linters, GNU Make, Git, the official open-source `nsc` client, and
 release-manifest tools. [NS-CLI-INSTALL] `buildGoModule` builds
 `pimobile-devctl` for the local Linux system and cross-compiles
 `pimobile-remote` with `CGO_ENABLED=0 GOOS=darwin GOARCH=arm64`. Its
@@ -291,8 +232,9 @@ authentication and ready-to-use Compute clients. [NS-API-SDK] [NS-GO-SDK]
 The actual `xcodebuild` invocation is intentionally **not** a Nix derivation.
 Xcode is part of Namespace's selected macOS image, signing consults a temporary
 Keychain, simulators are mutable services, and TestFlight upload is a network
-side effect. Nix pins and launches the controller and remote helper;
-`scripts/doctor` verifies the provider image before any Apple build.
+side effect. Nix pins the controller and remote helper; the development shell
+exposes them for direct invocation. `packages/devctl/scripts/doctor` verifies
+the provider image before any Apple build.
 
 Reproducible here means controlled source and toolchain inputs with a recorded
 provenance manifest. A signed `.ipa` is not required to be byte-for-byte
@@ -321,48 +263,47 @@ simulator downloads necessarily remain online operations.
 
 ### 5.1 NixOS workstation
 
-From a clean clone:
+A human operator who is not already in a managed development environment first
+enters the Nix shell:
 
 ```sh
 nix develop
-just doctor-linux
-just bootstrap
-just check-linux
 ```
 
-`just bootstrap` MAY download pinned dependencies but MUST NOT mutate lockfiles.
-`just doctor-linux` verifies the Nix version, flake support, required disk
-space, Git configuration, the pinned `nsc` build, and the local controller. It
-does not require Apple credentials.
+Inside that shell, including every coding-agent session, invoke the commands
+directly as required by [[contributing.md#Development Environment]]:
 
-The first successful `just check-linux` establishes that:
+```sh
+make check
+```
 
-1. the flake evaluates on the workstation architecture;
-2. generated protocol code is current;
-3. the gateway builds and its unit/contract tests pass;
-4. `PiMobileCore` builds and tests under the Linux Swift toolchain; and
-5. the Nix gateway package builds.
+The first successful `make check` establishes that:
+
+1. generated protocol code is current;
+2. the gateway builds and its unit/contract tests pass;
+3. `PiMobileCore` builds and tests under the Linux Swift toolchain; and
+4. repository formatting, lint, and static-validation gates pass.
 
 Swift on Linux is useful for this portable subset, but it is deliberately not an
 Apple-platform validation gate. [SWIFT-PLATFORMS]
 
 ### 5.2 Namespace workspace and first instance
 
-The operator performs these one-time steps from NixOS:
+The operator performs these one-time tasks from NixOS:
 
 1. Create or select a Namespace workspace with macOS capacity.
 2. Run the pinned `nsc login --browser=false`, open the printed URL in any
    browser, and select the workspace. Namespace documents this workstation login
    flow and the SDK's `auth.LoadUsertoken`/`auth.LoadDefaults` credential
    loading. [NS-LOGIN] [NS-GO-SDK]
-3. Run `just namespace-doctor`, which authenticates without printing
+3. Run `make namespace-doctor`, which authenticates without printing
    credentials, verifies workspace identity and local configuration, and
    performs no paid create operation. Actual shape capacity is proven only by
    `dev-up`; Namespace notes that shape availability depends on plan and
    remaining concurrency. [NS-CREATE]
-4. Run `just dev-up`. This is the first paid action; it prints the shape,
+4. Run `make dev-up`. This is the first paid action; it prints the shape,
    selectors, TTL, and purpose before asking for confirmation.
-5. Run `just dev-check`, then `just dev-down`.
+5. Run `make dev-check`, then `make dev-down`.
 
 No Xcode, Nix installation, SSH host configuration, or provider-issued IP
 address is managed manually on the remote Mac. Namespace's `nsc ssh` preserves
@@ -411,39 +352,37 @@ record before the first build upload. [APPLE-ASC-WORKFLOW]
 
 ## 6. One command surface
 
-The human-facing commands run on NixOS. Recipes that need Apple tooling call
-`pimobile-devctl`; the remote helper then invokes the same repository-owned
-scripts used by an interactive shell.
+The human-facing commands run on NixOS. The root and package command contracts
+are defined in [[contributing.md#Makefile Interface]]. Targets that need Apple
+tooling call `pimobile-devctl`; the remote helper then invokes the same
+package-owned scripts used by an interactive shell.
 
 | Command                                     | Runs on                    | Contract                                                                                        |
 | ------------------------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------- |
-| `just fmt`                                  | NixOS                      | Format Swift, TypeScript, Protobuf, Nix, Markdown, Go, and shell sources.                       |
-| `just lint`                                 | NixOS                      | Run static checks with warnings treated as failures.                                            |
-| `just generate`                             | NixOS                      | Regenerate Protobuf sources and fixtures.                                                       |
-| `just check-generated`                      | NixOS                      | Regenerate in a temporary directory and require a zero diff.                                    |
-| `just test-core`                            | NixOS                      | Run all portable Swift unit and property tests.                                                 |
-| `just test-gateway`                         | NixOS                      | Run gateway unit, protocol, security, and Pi-driver contract tests.                             |
-| `just test-devctl`                          | NixOS                      | Run controller unit, fake-API, state-machine, and redaction tests without creating an instance. |
-| `just build-gateway`                        | NixOS                      | Build the Nix gateway package and service closure.                                              |
-| `just dev-up`                               | NixOS → Namespace          | Create or adopt the project's development Mac after explicit cost confirmation.                 |
-| `just dev-status`                           | NixOS → Namespace          | Show instance ID, shape, image facts, deadline, commit, and dirty/sync state.                   |
-| `just dev-shell` / `dev-vnc`                | NixOS → Namespace          | Open a private shell or Namespace VNC session on the active instance.                           |
-| `just dev-extend DURATION=2h`               | NixOS → Namespace          | Extend within the configured maximum after confirmation.                                        |
-| `just dev-down`                             | NixOS → Namespace          | Retrieve pending logs, destroy the exact managed instance, and clear local state.               |
-| `just dev-gc`                               | NixOS → Namespace          | Find and destroy only expired/orphaned instances carrying this project's management labels.     |
-| `just build-ios`                            | NixOS → Namespace          | Sync the exact commit and compile the full app for the pinned simulator without signing.        |
-| `just test-ios`                             | NixOS → Namespace          | Build once and run the pull-request test plan; retrieve `.xcresult`.                            |
-| `just test-ui`                              | NixOS → Namespace          | Run deterministic UI and accessibility smoke tests.                                             |
-| `just test-performance`                     | NixOS → Namespace          | Run release-mode performance tests on the configured shape and recorded chip class.             |
-| `just archive VERSION=… BUILD=…`            | NixOS → one-shot Namespace | Produce and validate a signed `.xcarchive` and `.ipa`, then retrieve them.                      |
-| `just upload-testflight VERSION=… BUILD=…`  | NixOS → one-shot Namespace | Upload the already validated archive; never rebuild it.                                         |
-| `just release-testflight VERSION=… BUILD=…` | NixOS → one-shot Namespace | Create, sign, archive, validate, upload, retrieve, and destroy with cleanup on every exit.      |
-| `just check`                                | NixOS                      | Run all local gates; `just check-all` adds a paid Namespace simulator run.                      |
+| `make -C packages/protocol generate`        | NixOS                      | Regenerate Protobuf sources and fixtures.                                                       |
+| `make -C packages/ios test`                 | NixOS                      | Run all portable Swift unit and property tests.                                                 |
+| `make -C packages/gateway test`             | NixOS                      | Run gateway unit, protocol, security, and Pi-driver contract tests.                             |
+| `make -C packages/devctl test`              | NixOS                      | Run controller unit, fake-API, state-machine, and redaction tests without creating an instance. |
+| `make -C packages/gateway build`            | NixOS                      | Build the production gateway deliverable.                                                       |
+| `make dev-up`                               | NixOS → Namespace          | Create or adopt the project's development Mac after explicit cost confirmation.                 |
+| `make dev-status`                           | NixOS → Namespace          | Show instance ID, shape, image facts, deadline, commit, and dirty/sync state.                   |
+| `make dev-shell` / `make dev-vnc`           | NixOS → Namespace          | Open a private shell or Namespace VNC session on the active instance.                           |
+| `make dev-extend DURATION=2h`               | NixOS → Namespace          | Extend within the configured maximum after confirmation.                                        |
+| `make dev-down`                             | NixOS → Namespace          | Retrieve pending logs, destroy the exact managed instance, and clear local state.               |
+| `make dev-gc`                               | NixOS → Namespace          | Find and destroy only expired/orphaned instances carrying this project's management labels.     |
+| `make build-ios`                            | NixOS → Namespace          | Sync the exact commit and compile the full app for the pinned simulator without signing.        |
+| `make test-ios`                             | NixOS → Namespace          | Build once and run the pull-request test plan; retrieve `.xcresult`.                            |
+| `make test-ui`                              | NixOS → Namespace          | Run deterministic UI and accessibility smoke tests.                                             |
+| `make test-performance`                     | NixOS → Namespace          | Run release-mode performance tests on the configured shape and recorded chip class.             |
+| `make archive VERSION=… BUILD=…`            | NixOS → one-shot Namespace | Produce and validate a signed `.xcarchive` and `.ipa`, then retrieve them.                      |
+| `make upload-testflight VERSION=… BUILD=…`  | NixOS → one-shot Namespace | Upload the already validated archive; never rebuild it.                                         |
+| `make release-testflight VERSION=… BUILD=…` | NixOS → one-shot Namespace | Create, sign, archive, validate, upload, retrieve, and destroy with cleanup on every exit.      |
+| `make check-all`                            | NixOS → Namespace          | Run local gates and add a paid Namespace simulator run.                                         |
 
 Scripts MUST be non-interactive except for cost confirmation, first-time browser
 login, and explicitly named release provisioning. They MUST preserve raw tool
 logs, propagate the first failing status, redact secrets, and write structured
-results under `artifacts/`.
+results under `packages/devctl/artifacts/`.
 
 ## 7. `pimobile-devctl`: the remote-development controller
 
@@ -517,7 +456,7 @@ transfer/integrity failure, and `8` cleanup incomplete.
 
 ### 7.2 Checked-in configuration
 
-`Config/namespace.toml` contains no secrets:
+`packages/devctl/Config/namespace.toml` contains no secrets:
 
 ```toml
 schema_version = 1
@@ -565,8 +504,8 @@ tokens are enabled only after a live least-privilege test.
 
 ### 7.4 Local state and instance identity
 
-The ignored file `.devenv/namespace.json`, written atomically with mode `0600`,
-contains only:
+The ignored file `packages/devctl/.state/namespace.json`, written atomically
+with mode `0600`, contains only:
 
 ```json
 {
@@ -576,7 +515,10 @@ contains only:
   "createdAt": "…",
   "deadline": "…",
   "shape": "macos/arm64:6x14",
-  "selectors": ["macos.version=26.x", "image.with=xcode-26"],
+  "selectors": [
+    "macos.version=26.x",
+    "image.with=xcode-26"
+  ],
   "remoteHelperDigest": "sha256:…",
   "lastCommit": "…"
 }
@@ -655,7 +597,8 @@ No hosted Git remote is required:
 6. Package results without following links outside the operation directory;
    write checksums and a manifest first.
 7. Download the package with `nsc instance download`, verify it on NixOS, and
-   unpack under `artifacts/<commit>/<operation-id>/`. [NS-DOWNLOAD]
+   unpack under `packages/devctl/artifacts/<commit>/<operation-id>/`.
+   [NS-DOWNLOAD]
 8. Delete the remote operation directory. The instance root disk is discarded by
    `down` regardless.
 
@@ -669,7 +612,7 @@ sole copy.
 
 - `up`, `extend`, and release commands print shape and deadline and require
   confirmation unless `--yes` is explicitly passed.
-- No shell hook, editor launch, ordinary `just check`, or read-only command may
+- No shell hook, editor launch, ordinary `make check`, or read-only command may
   create paid compute.
 - `default_ttl` and `maximum_ttl` are parsed with upper bounds in code;
   configuration cannot request an unlimited instance.
@@ -685,44 +628,45 @@ sole copy.
 
 ### 7.8 Controller tests
 
-`just test-devctl` uses an in-memory fake of the narrow Compute interface and a
-fake process runner. It covers create/wait failure at every transition, atomic
-state recovery, duplicate `up`, mismatched labels, refusal to delete foreign
-instances, deadline limits, signals, redaction, checksum failure, command
-argument boundaries, and idempotent `down`.
+`make -C packages/devctl test` uses an in-memory fake of the narrow Compute
+interface and a fake process runner. It covers create/wait failure at every
+transition, atomic state recovery, duplicate `up`, mismatched labels, refusal to
+delete foreign instances, deadline limits, signals, redaction, checksum failure,
+command argument boundaries, and idempotent `down`.
 
-`just test-devctl-live` is explicit and billable. It creates the smallest
+`make test-devctl-live` is explicit and billable. It creates the smallest
 configured qualification instance with a 15-minute TTL, runs
 `xcodebuild -version`, uploads and downloads a random checksum fixture, tests
 extension without exceeding the maximum, destroys the instance, and verifies
-through the API that it is gone. It MUST run once during M0 and after every
+through the API that it is gone. It MUST run once during Task M0 and after every
 Namespace SDK/API upgrade; it is not part of ordinary local tests.
 
 ## 8. Build procedures
 
 ### 8.1 Protocol generation
 
-`just generate` performs, in order:
+`make -C packages/protocol generate` performs, in order:
 
-1. lint `pi_mobile.proto`;
-2. generate SwiftProtobuf sources into `PiMobileCore`;
-3. generate TypeScript sources into `gateway/src/generated`;
+1. lint the schema;
+2. generate the SwiftProtobuf sources;
+3. generate the TypeScript sources;
 4. regenerate canonical binary and JSON diagnostic fixtures;
 5. compile both generated targets; and
 6. write the schema SHA-256 into both products' build metadata.
 
-Generation MUST NOT occur in an Xcode build phase. A schema change is complete
+Generation MUST NOT occur as an Xcode build action. A schema change is complete
 only when generated code, compatibility fixtures, gateway tests, reducer tests,
 and the capability mapping change together.
 
 ### 8.2 Gateway build
 
-The gateway pipeline is fully local to NixOS:
+The gateway pipeline is fully local to NixOS and runs through its package
+interface:
 
 ```sh
-nix develop -c just test-gateway
-nix build .#gateway
-nix flake check
+make -C packages/gateway check
+make -C packages/gateway build
+make -C packages/gateway test
 ```
 
 It MUST run:
@@ -735,8 +679,7 @@ It MUST run:
 - driver contract suites against every exact Pi revision in `pi.lock.json`;
 - disconnect, restart, slow-consumer, and ambiguous-delivery integration tests;
   and
-- a Nix build that installs the production Node runtime and immutable dependency
-  closure.
+- a production Node build against the locked dependency graph.
 
 `nixosModules.gateway` MUST expose a hardened systemd service without embedding
 secrets in the Nix store. Credential paths are supplied at activation/runtime
@@ -745,7 +688,7 @@ from root-owned files; secret values are never Nix expression inputs.
 ### 8.3 Portable Swift build on NixOS
 
 ```sh
-nix develop -c swift test --package-path ios/Packages/PiMobileCore
+make -C packages/ios test
 ```
 
 This gate covers:
@@ -769,7 +712,7 @@ equivalent of:
 
 ```sh
 xcodebuild \
-  -project ios/PiMobile.xcodeproj \
+  -project packages/ios/PiMobile.xcodeproj \
   -scheme PiMobile \
   -configuration Debug \
   -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
@@ -871,24 +814,27 @@ Device-only coverage includes:
 - a long streaming session followed by review of device-visible diagnostics,
   crashes, and retained dSYM symbolication.
 
-These are scripted manual acceptance steps in
-`ios/TestPlans/TestFlightDeviceChecklist.md`; an `.xctestplan` cannot be
-executed inside a distributed TestFlight app. No release test uses a production
-transcript, credential, repository, or model-provider account.
+These are scripted manual acceptance tasks in
+`packages/ios/TestPlans/TestFlightDeviceChecklist.md`; an `.xctestplan` cannot
+be executed inside a distributed TestFlight app. No release test uses a
+production transcript, credential, repository, or model-provider account.
 
 ## 9. Test gates and cadence
 
-| Gate                   | Required checks                                                                                                  | When it blocks                                                                       |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| `G0 Linux`             | `nix flake check`, formatting, lint, generated-code diff, gateway tests, portable Swift tests, Nix gateway build | Every commit before it is shared                                                     |
-| `G1 Apple compile`     | Clean full-app simulator compile under the pinned Xcode                                                          | Every pull request/change set                                                        |
-| `G2 Apple functional`  | Unit/integration plan and deterministic UI smoke plan with `.xcresult`                                           | Every pull request/change set                                                        |
-| `G3 compatibility`     | All pinned Pi driver contract suites, restart/disconnect/slow-consumer cases                                     | Every Pi, protocol, gateway, or transport change                                     |
-| `G4 extended`          | Sanitizer suites, complete UI plan, cache migrations, fuzz corpus                                                | Nightly and before a release candidate                                               |
-| `G5 performance`       | Shape/chip-keyed release-mode baselines plus invariant memory bounds                                             | Before TestFlight when performance-sensitive code changed; otherwise at least weekly |
-| `G6 distribution`      | Clean archive, signature/profile/entitlement inspection, validation, provenance manifest, upload                 | Every candidate upload                                                               |
-| `G7 TestFlight device` | Apple processing complete, install on a real iPhone, security/accessibility/background/push checklist            | Every candidate before promotion                                                     |
-| `G8 verified beta`     | Compliance resolved, internal group enabled, device evidence retained, exact build tagged                        | Definition of a shipped beta                                                         |
+| Gate                   | Required checks                                                                                            | When it blocks                                                                       |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `G0 Linux`             | `make check`: formatting, lint, generated-code diff, gateway tests, portable Swift tests, and local builds | Every commit before it is shared                                                     |
+| `G1 Apple compile`     | Clean full-app simulator compile under the pinned Xcode                                                    | Every pull request/change set                                                        |
+| `G2 Apple functional`  | Unit/integration plan and deterministic UI smoke plan with `.xcresult`                                     | Every pull request/change set                                                        |
+| `G3 compatibility`     | All pinned Pi driver contract suites, restart/disconnect/slow-consumer cases                               | Every Pi, protocol, gateway, or transport change                                     |
+| `G4 extended`          | Sanitizer suites, complete UI plan, cache migrations, fuzz corpus                                          | Nightly and before a release candidate                                               |
+| `G5 performance`       | Shape/chip-keyed release-mode baselines plus invariant memory bounds                                       | Before TestFlight when performance-sensitive code changed; otherwise at least weekly |
+| `G6 distribution`      | Clean archive, signature/profile/entitlement inspection, validation, provenance manifest, upload           | Every candidate upload                                                               |
+| `G7 TestFlight device` | Apple processing complete, install on a real iPhone, security/accessibility/background/push checklist      | Every candidate before promotion                                                     |
+| `G8 verified beta`     | Compliance resolved, internal group enabled, device evidence retained, exact build tagged                  | Definition of a shipped beta                                                         |
+
+CI separately evaluates and builds the flake outputs. That intrinsic Nix
+validation is not part of the Makefile command interface.
 
 There is no global line-coverage percentage. The state machines and protocol
 mappings MUST instead demonstrate transition and error-case coverage: every
@@ -935,10 +881,10 @@ instances never receive these files.
 The first release SHOULD use Xcode Organizer through Namespace VNC so team,
 entitlements, provisioning, validation, and App Store association are visible.
 Namespace documents VNC access from its dashboard and `nsc vnc`. [NS-MACOS]
-After one successful manual release, `scripts/upload-testflight` MAY use a
-narrowly permissioned App Store Connect key and Apple's supported upload path.
-Apple supports uploads through Xcode, Transporter, altool, or its build-upload
-mechanisms. [APPLE-UPLOAD]
+After one successful manual release, `packages/devctl/scripts/upload-testflight`
+MAY use a narrowly permissioned App Store Connect key and Apple's supported
+upload path. Apple supports uploads through Xcode, Transporter, altool, or its
+build-upload mechanisms. [APPLE-UPLOAD]
 
 Namespace Secrets MAY later replace local secret staging for automation;
 Namespace documents encryption at rest, audited access, explicit secret
@@ -958,12 +904,11 @@ succeeds or fails.
 
 ### 11.1 Release inputs
 
-The operator starts on NixOS:
+The operator starts inside the development shell on NixOS:
 
 ```sh
-nix develop
-just release-preflight VERSION=0.1.0 BUILD=1
-just release-testflight VERSION=0.1.0 BUILD=1
+make release-preflight VERSION=0.1.0 BUILD=1
+make release-testflight VERSION=0.1.0 BUILD=1
 ```
 
 `VERSION` is the user-facing marketing version. `BUILD` is an explicitly
@@ -991,7 +936,7 @@ The remote helper on the one-shot release instance executes the equivalent of:
 
 ```sh
 xcodebuild \
-  -project ios/PiMobile.xcodeproj \
+  -project packages/ios/PiMobile.xcodeproj \
   -scheme PiMobile \
   -configuration Release \
   -destination 'generic/platform=iOS' \
@@ -1006,7 +951,7 @@ xcodebuild \
   -exportArchive \
   -archivePath "$ARCHIVE_PATH" \
   -exportPath "$EXPORT_PATH" \
-  -exportOptionsPlist Config/ExportOptions-Local.plist
+  -exportOptionsPlist packages/ios/Config/ExportOptions-Local.plist
 ```
 
 Apple documents an archive as the input to distribution and supports
@@ -1044,12 +989,12 @@ documents dashboard and CLI VNC for macOS runners. [NS-MACOS]
 For subsequent automated releases:
 
 ```sh
-just upload-testflight VERSION=0.1.0 BUILD=1
+make upload-testflight VERSION=0.1.0 BUILD=1
 ```
 
 The command MUST locate the existing manifest and archive on NixOS, re-check
 their hashes, create a fresh one-shot release instance, upload that archive, and
-use `Config/ExportOptions-TestFlight.plist` or Apple's supported
+use `packages/ios/Config/ExportOptions-TestFlight.plist` or Apple's supported
 Transporter/altool path. It MUST refuse to build. Upload credentials are
 imported into the temporary Keychain, never embedded in command arguments,
 configuration, or artifacts.
@@ -1099,7 +1044,10 @@ Every Mac build writes `build-manifest.json` containing at least:
   "hostArchitecture": "arm64",
   "namespaceInstanceId": "…",
   "namespaceShape": "macos/arm64:12x28",
-  "namespaceSelectors": ["macos.version=26.x", "image.with=xcode-26"],
+  "namespaceSelectors": [
+    "macos.version=26.x",
+    "image.with=xcode-26"
+  ],
   "namespaceImage": "…",
   "appleChip": "…",
   "pimobileDevctlVersion": "…",
@@ -1158,15 +1106,15 @@ commits or clearly separated changes so regressions can be attributed. Automated
 dependency tools may propose updates but never merge them or change the
 TestFlight build inputs automatically.
 
-## 14. Inception-to-TestFlight milestones
+## 14. Inception-to-TestFlight tasks
 
-### M0 — build spine before product code
+### Task M0 — build spine before product code
 
-- Commit the flake, lockfile, `Justfile`, Namespace config, controller/remote Go
-  module, toolchain pin, thin Xcode project, shared scheme, and empty test
-  plans.
-- Make `just check-linux`, `just test-devctl`, `just test-devctl-live`, and
-  `just build-ios` green.
+- Commit the flake, lockfile, root and package Makefiles, Namespace config,
+  controller/remote Go module, toolchain pin, thin Xcode project, shared scheme,
+  and empty test plans.
+- Make `make check`, `make -C packages/devctl test`, `make test-devctl-live`,
+  and `make build-ios` green.
 - Exercise create, readiness, exact image doctor, upload/download, interrupt
   cleanup, explicit destroy, and label-scoped garbage collection.
 - Complete the Apple account prerequisites in §5.3 early enough to use the
@@ -1181,7 +1129,7 @@ TestFlight build inputs automatically.
 installs from TestFlight, all from commands issued on NixOS; the Namespace
 instance is confirmed destroyed afterward.
 
-### M1 — stable protocol and gateway skeleton
+### Task M1 — stable protocol and gateway skeleton
 
 - Add Protobuf generation and drift checks.
 - Package the gateway as a Nix derivation and NixOS module.
@@ -1190,7 +1138,7 @@ instance is confirmed destroyed afterward.
 **Exit:** the simulator app and NixOS gateway complete hello/list/attach using
 fixtures without live Pi.
 
-### M2 — state and rendering correctness
+### Task M2 — state and rendering correctness
 
 - Implement `PiMobileCore` reducer and property tests on NixOS.
 - Implement Apple transport, persistence, security, and UI adapters.
@@ -1199,7 +1147,7 @@ fixtures without live Pi.
 **Exit:** G0–G4 pass and the simulator survives all snapshot/progress/reconnect
 cases.
 
-### M3 — real Pi contract
+### Task M3 — real Pi contract
 
 - Freeze the selected Pi revisions.
 - Run gateway driver contract tests against real upstream servers.
@@ -1209,10 +1157,11 @@ cases.
 **Exit:** G3 passes without production credentials or data; the device portion
 is repeated in G7 on the release candidate.
 
-### M4 — release infrastructure
+### Task M4 — release infrastructure
 
 - Finalize the production App ID/app record, signing material, APNs, TestFlight
-  group, and export-compliance data first exercised by the M0 qualification app.
+  group, and export-compliance data first exercised by the Task M0 qualification
+  app.
 - Produce the first remotely validated archive and provenance manifest.
 - Perform a disaster-recovery rehearsal on a fresh one-shot Namespace instance
   using backed-up signing material and this document.
@@ -1220,7 +1169,7 @@ is repeated in G7 on the release candidate.
 **Exit:** G6 passes and the archive is uploadable without changing source or
 project settings in Xcode.
 
-### M5 — TestFlight
+### Task M5 — TestFlight
 
 - Upload the exact validated archive.
 - Wait for Complete status, resolve compliance, add the internal group, install,
@@ -1234,7 +1183,7 @@ without relying on another person's machine or account.
 
 The build system is complete only when:
 
-1. `nix flake check` and `just check-linux` pass from a clean NixOS clone.
+1. `make check` passes from a clean NixOS clone inside the development shell.
 2. The gateway is produced as a Nix package and can be enabled through the
    repository's NixOS module.
 3. All platform-neutral Swift logic builds and tests on NixOS.
@@ -1258,7 +1207,7 @@ The build system is complete only when:
 12. A lost NixOS process cannot leave an unlimited instance: every instance has
     a provider deadline, matching labels, recoverable state, idempotent destroy,
     and tested garbage collection.
-13. `just test-devctl-live` proves create, wait, private access, transfer,
+13. `make test-devctl-live` proves create, wait, private access, transfer,
     extend, and destroy against the pinned Namespace SDK before product work and
     after SDK upgrades.
 14. Replacing Namespace with another rented Apple-hardware provider changes the
@@ -1269,39 +1218,26 @@ The build system is complete only when:
 [APPLE-XCODE-LICENSE]: https://www.apple.com/legal/sla/docs/xcode.pdf
 [APPLE-XCODE-MATRIX]: https://developer.apple.com/xcode/system-requirements
 [APPLE-DEVELOPER-PROGRAM]: https://developer.apple.com/programs/
-[APPLE-PROVISIONING]:
-  https://developer.apple.com/help/account/provisioning-profiles/create-an-app-store-provisioning-profile
-[APPLE-ASC-WORKFLOW]:
-  https://developer.apple.com/help/app-store-connect/get-started/app-store-connect-workflow
-[APPLE-ASC-KEYS]:
-  https://developer.apple.com/documentation/appstoreconnectapi/creating-api-keys-for-app-store-connect-api
+[APPLE-PROVISIONING]: https://developer.apple.com/help/account/provisioning-profiles/create-an-app-store-provisioning-profile
+[APPLE-ASC-WORKFLOW]: https://developer.apple.com/help/app-store-connect/get-started/app-store-connect-workflow
+[APPLE-ASC-KEYS]: https://developer.apple.com/documentation/appstoreconnectapi/creating-api-keys-for-app-store-connect-api
 [APPLE-TESTING]: https://developer.apple.com/documentation/xcode/testing
-[APPLE-TEST-PLANS]:
-  https://developer.apple.com/documentation/xcode/organizing-tests-to-improve-feedback
-[APPLE-PERFORMANCE-TESTS]:
-  https://developer.apple.com/documentation/xcode/writing-and-running-performance-tests
-[APPLE-DISTRIBUTION]:
-  https://developer.apple.com/documentation/xcode/distributing-your-app-for-beta-testing-and-releases
-[APPLE-XCODEBUILD]:
-  https://developer.apple.com/library/archive/technotes/tn2339/_index.html
-[APPLE-UPLOAD]:
-  https://developer.apple.com/help/app-store-connect/manage-builds/upload-builds/
-[APPLE-BUILD-STATUS]:
-  https://developer.apple.com/help/app-store-connect/manage-builds/view-builds-and-metadata/
-[APPLE-EXPORT-COMPLIANCE]:
-  https://developer.apple.com/help/app-store-connect/test-a-beta-version/provide-export-compliance-information-for-beta-builds/
-[APPLE-TESTFLIGHT]:
-  https://developer.apple.com/help/app-store-connect/test-a-beta-version/testflight-overview/
-[APPLE-XCODE-CLOUD]:
-  https://developer.apple.com/documentation/xcode/distributing-your-xcode-cloud-builds-through-testflight
+[APPLE-TEST-PLANS]: https://developer.apple.com/documentation/xcode/organizing-tests-to-improve-feedback
+[APPLE-PERFORMANCE-TESTS]: https://developer.apple.com/documentation/xcode/writing-and-running-performance-tests
+[APPLE-DISTRIBUTION]: https://developer.apple.com/documentation/xcode/distributing-your-app-for-beta-testing-and-releases
+[APPLE-XCODEBUILD]: https://developer.apple.com/library/archive/technotes/tn2339/_index.html
+[APPLE-UPLOAD]: https://developer.apple.com/help/app-store-connect/manage-builds/upload-builds/
+[APPLE-BUILD-STATUS]: https://developer.apple.com/help/app-store-connect/manage-builds/view-builds-and-metadata/
+[APPLE-EXPORT-COMPLIANCE]: https://developer.apple.com/help/app-store-connect/test-a-beta-version/provide-export-compliance-information-for-beta-builds/
+[APPLE-TESTFLIGHT]: https://developer.apple.com/help/app-store-connect/test-a-beta-version/testflight-overview/
+[APPLE-XCODE-CLOUD]: https://developer.apple.com/documentation/xcode/distributing-your-xcode-cloud-builds-through-testflight
 [SWIFT-PLATFORMS]: https://www.swift.org/platform-support/
 [SWIFTPM]: https://docs.swift.org/swiftpm/documentation/packagemanagerdocs/
 [NS-MACOS]: https://namespace.so/docs/architecture/compute/macos
 [NS-SHAPES]: https://namespace.so/docs/architecture/compute/machine-shapes
 [NS-API-SDK]: https://namespace.so/docs/reference/api-sdk
 [NS-GO-SDK]: https://github.com/namespacelabs/integrations
-[NS-MACRUN]:
-  https://github.com/namespacelabs/integrations/blob/main/examples/macrun/macrun.go
+[NS-MACRUN]: https://github.com/namespacelabs/integrations/blob/main/examples/macrun/macrun.go
 [NS-CLI-INSTALL]: https://namespace.so/docs/reference/cli/installation
 [NS-CREATE]: https://namespace.so/docs/reference/cli/create
 [NS-DESTROY]: https://namespace.so/docs/reference/cli/destroy

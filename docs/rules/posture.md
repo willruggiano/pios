@@ -1,16 +1,17 @@
 # Engineering Posture
 
-This project is in the 0.1.x phase. Breaking compatibility is acceptable when it
-makes the implementation more correct, simpler, or easier to maintain.
+This project is in the 0.1.x release line. Breaking compatibility is acceptable
+when it makes the implementation more correct, simpler, or easier to maintain.
 
-Prefer the direct, idiomatic Rust design over compatibility shims or legacy
-fallback paths. Use the type system to encode invariants where practical: small
-focused interfaces, distinct named types over bare primitives where they carry
-meaning, and explicit dependency wiring rather than package globals.
+Prefer the direct, idiomatic design for each implementation language over
+compatibility shims or legacy fallback paths. Use the type system to encode
+invariants where practical: small focused interfaces, distinct named types over
+bare primitives where they carry meaning, and explicit dependency wiring rather
+than package globals.
 
 Optimize for local readability and whole-system readability at the same time:
 keep changes scoped to the relevant package, avoid clever abstractions without a
-real payoff, and preserve clear boundaries sub-systems.
+real payoff, and preserve clear boundaries between subsystems.
 
 For performance-oriented changes, add or update a focused benchmark that
 validates the expected benefit.
@@ -69,11 +70,11 @@ Transform tasks into verifiable goals:
 - "Fix the bug" -> "Write a test that reproduces it, then make it pass"
 - "Refactor X" -> "Ensure tests pass before and after"
 
-For multi-step tasks, state a brief plan:
+For tasks with multiple actions, state a brief plan:
 
-1. [Step] -> verify: [check]
-2. [Step] -> verify: [check]
-3. [Step] -> verify: [check]
+1. [Action] -> verify: [check]
+2. [Action] -> verify: [check]
+3. [Action] -> verify: [check]
 
 Strong success criteria let you loop independently. Weak criteria ("make it
 work") require constant clarification.
