@@ -1,4 +1,4 @@
-# Build and test plan: Pi Mobile
+# Build and test plan: PiOS
 
 **Status:** proposed build plan **Research date:** 2026-08-15  
 **Related design:** [[architecture.md]]
@@ -23,7 +23,7 @@ instance**:
 ```mermaid
 flowchart LR
     NIX["NixOS control workstation<br/>source, Nix, gateway, portable tests"]
-    DEVCTL["pimobile-devctl<br/>Namespace lifecycle + transfer"]
+    DEVCTL["pios-devctl<br/>Namespace lifecycle + transfer"]
     MAC["Ephemeral Namespace Mac<br/>Xcode build, simulator, signing"]
     PHONE["Physical iPhone<br/>TestFlight acceptance"]
     ASC["App Store Connect<br/>processing + TestFlight"]
@@ -148,14 +148,14 @@ The canonical repository and package layout is defined in
 [[contributing.md#Repository Layout]]. Build configuration, tests, scripts,
 locks, and output remain in the package that owns them.
 
-`pimobile-devctl` is the Linux controller. `pimobile-remote` is a small,
-statically linked `darwin/arm64` helper built from the same Go module and
-delivered as the instance's application image. The layout follows Namespace's
-official `macrun` example: cross-compile a Darwin binary, package it as an OCI
-layer, push it to Namespace Container Registry by digest, call `CreateInstance`,
-and wait for readiness. [NS-MACRUN] The helper is not a privileged daemon; it
-keeps the development application alive, exposes only fixed build operations,
-and exits when the lease ends.
+`pios-devctl` is the Linux controller. `pios-remote` is a small, statically
+linked `darwin/arm64` helper built from the same Go module and delivered as the
+instance's application image. The layout follows Namespace's official `macrun`
+example: cross-compile a Darwin binary, package it as an OCI layer, push it to
+Namespace Container Registry by digest, call `CreateInstance`, and wait for
+readiness. [NS-MACRUN] The helper is not a privileged daemon; it keeps the
+development application alive, exposes only fixed build operations, and exits
+when the lease ends.
 
 The checked-in Xcode project MUST remain thin: app targets, signing,
 entitlements, assets, schemes, test plans, and links to local Swift packages.
@@ -164,16 +164,16 @@ reviewable outside `project.pbxproj`. The project file, shared schemes,
 `.xcconfig` files, test plans, entitlements, and SwiftPM `Package.resolved` MUST
 be committed. Per-user Xcode state MUST be ignored.
 
-`PiMobileCore` contains only platform-neutral value types, Protobuf mappings,
+`PiOSCore` contains only platform-neutral value types, Protobuf mappings,
 replica reduction, command state, and deterministic utilities. It MUST build and
-test on Linux and macOS. `PiMobileApple` contains `URLSessionWebSocketTask`,
-Core Data, Keychain, SwiftUI, local authentication, notifications, and other
-Apple-framework adapters. Linux success covers only `PiMobileCore`; the complete
-app is always compiled and tested with Xcode.
+test on Linux and macOS. `PiOSApple` contains `URLSessionWebSocketTask`, Core
+Data, Keychain, SwiftUI, local authentication, notifications, and other
+Apple-framework adapters. Linux success covers only `PiOSCore`; the complete app
+is always compiled and tested with Xcode.
 
-`packages/protocol/pi_mobile.proto` is the sole editable wire definition.
-Generated Swift and TypeScript sources MUST be committed so an Xcode build does
-not download or bootstrap code generators. `make -C packages/protocol generate`
+`packages/protocol/pios.proto` is the sole editable wire definition. Generated
+Swift and TypeScript sources MUST be committed so an Xcode build does not
+download or bootstrap code generators. `make -C packages/protocol generate`
 regenerates both outputs using Nix-pinned tools, and
 `make -C packages/protocol check` fails when regeneration changes the tree.
 Swift Package Manager can build and test packages on supported platforms,
@@ -213,7 +213,7 @@ package update, or Xcode-managed project migration in a normal build.
 ```text
 devShells.{x86_64-linux,aarch64-linux}.default
 checks.{x86_64-linux,aarch64-linux}.*
-packages.{x86_64-linux,aarch64-linux}.{gateway,pimobile-devctl,pimobile-remote}
+packages.{x86_64-linux,aarch64-linux}.{gateway,pios-devctl,pios-remote}
 nixosModules.gateway
 apps.<system>.check
 apps.<system>.devctl
@@ -222,12 +222,12 @@ apps.<system>.devctl
 The development shell pins Go, Node, npm, Swift for Linux-side package tests,
 `buf`, `protoc`, the Swift and TypeScript Protobuf generators, formatters,
 linters, GNU Make, Git, the official open-source `nsc` client, and
-release-manifest tools. [NS-CLI-INSTALL] `buildGoModule` builds
-`pimobile-devctl` for the local Linux system and cross-compiles
-`pimobile-remote` with `CGO_ENABLED=0 GOOS=darwin GOARCH=arm64`. Its
-`vendorHash`, `go.mod`, and `go.sum` pin the Namespace Go SDK and generated API
-packages. Namespace identifies its Go SDK as its most mature SDK, with
-authentication and ready-to-use Compute clients. [NS-API-SDK] [NS-GO-SDK]
+release-manifest tools. [NS-CLI-INSTALL] `buildGoModule` builds `pios-devctl`
+for the local Linux system and cross-compiles `pios-remote` with
+`CGO_ENABLED=0 GOOS=darwin GOARCH=arm64`. Its `vendorHash`, `go.mod`, and
+`go.sum` pin the Namespace Go SDK and generated API packages. Namespace
+identifies its Go SDK as its most mature SDK, with authentication and
+ready-to-use Compute clients. [NS-API-SDK] [NS-GO-SDK]
 
 The actual `xcodebuild` invocation is intentionally **not** a Nix derivation.
 Xcode is part of Namespace's selected macOS image, signing consults a temporary
@@ -281,7 +281,7 @@ The first successful `make check` establishes that:
 
 1. generated protocol code is current;
 2. the gateway builds and its unit/contract tests pass;
-3. `PiMobileCore` builds and tests under the Linux Swift toolchain; and
+3. `PiOSCore` builds and tests under the Linux Swift toolchain; and
 4. repository formatting, lint, and static-validation gates pass.
 
 Swift on Linux is useful for this portable subset, but it is deliberately not an
@@ -354,7 +354,7 @@ record before the first build upload. [APPLE-ASC-WORKFLOW]
 
 The human-facing commands run on NixOS. The root and package command contracts
 are defined in [[contributing.md#Makefile Interface]]. Targets that need Apple
-tooling call `pimobile-devctl`; the remote helper then invokes the same
+tooling call `pios-devctl`; the remote helper then invokes the same
 package-owned scripts used by an interactive shell.
 
 | Command                                         | Runs on                     | Contract                                                                                        |
@@ -384,7 +384,7 @@ login, and explicitly named release provisioning. They MUST preserve raw tool
 logs, propagate the first failing status, redact secrets, and write structured
 results under `packages/devctl/artifacts/`.
 
-## 7. `pimobile-devctl`: the remote-development controller
+## 7. `pios-devctl`: the remote-development controller
 
 ### 7.1 Why a Go binary
 
@@ -432,20 +432,20 @@ can implement it without changing build operations.
 The stable CLI is:
 
 ```text
-pimobile-devctl doctor
-pimobile-devctl up [--role development] [--ttl 2h] [--yes]
-pimobile-devctl status [--json]
-pimobile-devctl sync [--include-worktree]
-pimobile-devctl run <doctor|build-ios|test-ios|test-ui|test-performance>
-pimobile-devctl shell
-pimobile-devctl vnc
-pimobile-devctl extend --duration 2h [--yes]
-pimobile-devctl down [--yes]
-pimobile-devctl gc [--dry-run|--apply]
-pimobile-devctl with --operation <operation> [typed operation arguments]
-pimobile-devctl release archive --version <semver> --build <integer>
-pimobile-devctl release upload --version <semver> --build <integer>
-pimobile-devctl release testflight --version <semver> --build <integer>
+pios-devctl doctor
+pios-devctl up [--role development] [--ttl 2h] [--yes]
+pios-devctl status [--json]
+pios-devctl sync [--include-worktree]
+pios-devctl run <doctor|build-ios|test-ios|test-ui|test-performance>
+pios-devctl shell
+pios-devctl vnc
+pios-devctl extend --duration 2h [--yes]
+pios-devctl down [--yes]
+pios-devctl gc [--dry-run|--apply]
+pios-devctl with --operation <operation> [typed operation arguments]
+pios-devctl release archive --version <semver> --build <integer>
+pios-devctl release upload --version <semver> --build <integer>
+pios-devctl release testflight --version <semver> --build <integer>
 ```
 
 Normal output is for humans; `--json` emits a versioned envelope on standard
@@ -465,8 +465,8 @@ machine_type = "macos/arm64:6x14"
 selectors = ["macos.version=26.x", "image.with=xcode-26"]
 default_ttl = "2h"
 maximum_ttl = "8h"
-purpose = "pi-mobile native iOS development"
-remote_root = "/tmp/pi-mobile"
+purpose = "pios native iOS development"
+remote_root = "/tmp/pios"
 artifact_expiry = "14d"
 
 [release]
@@ -475,7 +475,7 @@ ttl = "2h"
 
 [cache]
 enabled = false
-tag = "pi-mobile-xcode-v1"
+tag = "pios-xcode-v1"
 minimum_size = "50gb"
 mount_point = "/cache"
 ```
@@ -488,7 +488,7 @@ versions. [NS-CACHE]
 
 ### 7.3 Authentication
 
-For interactive use, `pimobile-devctl` calls the SDK's
+For interactive use, `pios-devctl` calls the SDK's
 `auth.LoadUsertoken`/`auth.LoadDefaults` after `nsc login`; the token is never
 copied into repository state. [NS-GO-SDK] For unattended use, `NSC_TOKEN_FILE`
 may point to a mode-`0600` file outside the checkout and Nix store. Namespace
@@ -511,7 +511,7 @@ with mode `0600`, contains only:
 {
   "schemaVersion": 1,
   "instanceId": "...",
-  "uniqueTag": "pi-mobile-...",
+  "uniqueTag": "pios-...",
   "createdAt": "...",
   "deadline": "...",
   "shape": "macos/arm64:6x14",
@@ -523,7 +523,7 @@ with mode `0600`, contains only:
 
 A file lock prevents two controllers from mutating the same state. Every
 instance is created with a stable unique tag plus labels
-`managed-by=pimobile-devctl`, `project=<non-secret repository UUID>`,
+`managed-by=pios-devctl`, `project=<non-secret repository UUID>`,
 `role=development|release`, and `owner=<opaque local ID>`. Namespace documents
 labels for programmatic filtering, a purpose field, and unique tags as stable
 automation handles. [NS-CREATE]
@@ -548,9 +548,9 @@ absent -> creating -> ready -> syncing -> running -> collecting -> destroying ->
 1. authenticate and acquire the local state lock;
 2. reconcile local state with the Compute API and adopt only an exactly
    labelled, compatible instance;
-3. build `pimobile-remote` on NixOS for `darwin/arm64`, package it in an OCI
-   image, and push it by immutable digest, following Namespace's official
-   `macrun` pattern; [NS-MACRUN]
+3. build `pios-remote` on NixOS for `darwin/arm64`, package it in an OCI image,
+   and push it by immutable digest, following Namespace's official `macrun`
+   pattern; [NS-MACRUN]
 4. call `CreateInstance` with `Os: "macos"`, `MachineArch: "arm64"`, configured
    vCPU/RAM, selectors, labels, documented purpose, application image digest,
    and an absolute deadline;
@@ -698,9 +698,9 @@ This gate covers:
 - capability negotiation; and
 - deterministic property tests and fixtures.
 
-`PiMobileCore` MUST NOT import SwiftUI, UIKit, Security, Core Data,
+`PiOSCore` MUST NOT import SwiftUI, UIKit, Security, Core Data,
 LocalAuthentication, UserNotifications, or other Apple-only frameworks. Any
-system-dependent implementation belongs behind a protocol in `PiMobileApple`.
+system-dependent implementation belongs behind a protocol in `PiOSApple`.
 
 ### 8.4 Full iOS simulator build
 
@@ -709,8 +709,8 @@ equivalent of:
 
 ```sh
 xcodebuild \
-  -project packages/ios/PiMobile.xcodeproj \
-  -scheme PiMobile \
+  -project packages/ios/PiOS.xcodeproj \
+  -scheme PiOS \
   -configuration Debug \
   -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
   -derivedDataPath "$DERIVED_DATA" \
@@ -892,10 +892,10 @@ injection is not the inception default for certificate material.
 
 A release instance MUST NOT execute code from untrusted pull requests. All
 ordinary/PR instances are credential-free. Only a clean, protected, reviewed
-commit may cause `pimobile-devctl` to create a one-shot `role=release` instance.
-The controller imports credentials only after source verification and destroys
-the instance immediately after artifact retrieval, whether the operation
-succeeds or fails.
+commit may cause `pios-devctl` to create a one-shot `role=release` instance. The
+controller imports credentials only after source verification and destroys the
+instance immediately after artifact retrieval, whether the operation succeeds or
+fails.
 
 ## 11. Archive and TestFlight procedure
 
@@ -933,8 +933,8 @@ The remote helper on the one-shot release instance executes the equivalent of:
 
 ```sh
 xcodebuild \
-  -project packages/ios/PiMobile.xcodeproj \
-  -scheme PiMobile \
+  -project packages/ios/PiOS.xcodeproj \
+  -scheme PiOS \
   -configuration Release \
   -destination 'generic/platform=iOS' \
   -derivedDataPath "$DERIVED_DATA" \
@@ -976,9 +976,9 @@ destroyed.
 
 ### 11.3 Validate and upload
 
-For the first release, `pimobile-devctl` keeps the one-shot release instance
-alive within its deadline and opens Namespace VNC. Open the remote `.xcarchive`
-in Xcode Organizer, choose **Validate App**, inspect every warning, then choose
+For the first release, `pios-devctl` keeps the one-shot release instance alive
+within its deadline and opens Namespace VNC. Open the remote `.xcarchive` in
+Xcode Organizer, choose **Validate App**, inspect every warning, then choose
 **Distribute App -> App Store Connect -> Upload**. Xcode's distribution workflow
 creates and validates archives before upload. [APPLE-DISTRIBUTION] Namespace
 documents dashboard and CLI VNC for macOS runners. [NS-MACOS]
@@ -1044,7 +1044,7 @@ Every Mac build writes `build-manifest.json` containing at least:
   "namespaceSelectors": ["macos.version=26.x", "image.with=xcode-26"],
   "namespaceImage": "...",
   "appleChip": "...",
-  "pimobileDevctlVersion": "...",
+  "piosDevctlVersion": "...",
   "remoteHelperDigest": "sha256:...",
   "nscVersion": "...",
   "configuration": "Release",
@@ -1134,7 +1134,7 @@ fixtures without live Pi.
 
 ### Task M2 -- state and rendering correctness
 
-- Implement `PiMobileCore` reducer and property tests on NixOS.
+- Implement `PiOSCore` reducer and property tests on NixOS.
 - Implement Apple transport, persistence, security, and UI adapters.
 - Establish UI, accessibility, migration, and large-transcript test suites.
 

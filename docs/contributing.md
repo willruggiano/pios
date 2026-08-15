@@ -56,7 +56,7 @@ The repository MUST converge on this layout:
 |   |-- protocol/
 |   |   |-- default.nix
 |   |   |-- Makefile
-|   |   |-- pi_mobile.proto
+|   |   |-- pios.proto
 |   |   |-- buf.yaml
 |   |   `-- fixtures/
 |   |-- gateway/
@@ -72,11 +72,11 @@ The repository MUST converge on this layout:
 |   |   |-- default.nix
 |   |   |-- Makefile
 |   |   |-- Config/
-|   |   |-- PiMobile.xcodeproj/
-|   |   |-- PiMobileApp/
+|   |   |-- PiOS.xcodeproj/
+|   |   |-- PiOSApp/
 |   |   |-- Packages/
-|   |   |   |-- PiMobileCore/
-|   |   |   `-- PiMobileApple/
+|   |   |   |-- PiOSCore/
+|   |   |   `-- PiOSApple/
 |   |   |-- TestPlans/
 |   |   `-- Tests/
 |   `-- devctl/
@@ -95,8 +95,8 @@ The repository MUST converge on this layout:
 `-- tools/
 ```
 
-`packages/devctl/.state/` and `packages/devctl/artifacts/` MUST be ignored and
-MUST never be source inputs. Package source, tests, configuration, and build
+`packages/devctl/.gitignore` MUST ignore `.state/` and `artifacts/`; both MUST
+remain outside source inputs. Package source, tests, configuration, and build
 output remain inside their package. Root entries are limited to repository entry
 points, repository-wide orchestration, and files required at an exact root path
 by repository-wide tools.

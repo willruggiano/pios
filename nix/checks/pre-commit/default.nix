@@ -13,7 +13,13 @@
   }: let
     cfg = config.pre-commit;
   in {
-    devshells.default.devshell.startup.install-git-hooks.text = config.pre-commit.shellHook;
+    devshells = {
+      minimal = {
+        packages = [cfg.settings.package];
+        devshell.startup.install-git-hooks.text = config.pre-commit.shellHook;
+      };
+      namespace.devshell.startup.install-git-hooks.text = config.pre-commit.shellHook;
+    };
 
     packages.install-pre-commit =
       pkgs.writeShellScriptBin "install-pre-commit" config.pre-commit.installationScript;
@@ -36,6 +42,7 @@
           files = "\\.md$";
           pass_filenames = false;
         };
+        shellcheck.enable = true;
         statix.enable = true;
         treefmt = {
           enable = true;

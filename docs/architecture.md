@@ -30,10 +30,10 @@ The system has three required deployable components:
 1. **Pi server/runtime host.** Owns each live `Session` and `AgentHarness`;
    local terminal clients and remote clients attach to that server-owned
    runtime.
-2. **Pi Mobile Gateway.** Runs beside Pi, connects over Pi's Unix socket,
-   absorbs Pi's experimental protocol churn, authenticates mobile devices, and
-   exposes a stable binary WebSocket API.
-3. **Pi Mobile for iOS.** A native Swift app using SwiftUI, Swift Concurrency,
+2. **PiOS Gateway.** Runs beside Pi, connects over Pi's Unix socket, absorbs
+   Pi's experimental protocol churn, authenticates mobile devices, and exposes a
+   stable binary WebSocket API.
+3. **PiOS for iOS.** A native Swift app using SwiftUI, Swift Concurrency,
    `URLSessionWebSocketTask`, SwiftProtobuf, Keychain Services, and an encrypted
    local cache. Apple's WebSocket API is a message-oriented transport over
    TCP/TLS, and SwiftProtobuf provides schema-generated Swift value types plus
@@ -46,7 +46,7 @@ existing Pi policy and tool configuration.
 
 ```mermaid
 flowchart TB
-    IOS["Native iOS app"] -->|"WSS + mobile protocol"| GW["Pi Mobile Gateway"]
+    IOS["Native iOS app"] -->|"WSS + mobile protocol"| GW["PiOS Gateway"]
     GW -->|"Unix socket + pinned Pi driver"| PS["Pi server"]
     TERM["Local terminal client"] -->|"Pi client protocol"| PS
     PS --> HARNESS["Server-owned AgentHarness"]
@@ -75,8 +75,8 @@ from a terminal and a phone.
 
 Therefore:
 
-- The App Store client MUST speak only the stable **Pi Mobile Protocol**, never
-  an unversioned Pi wire format.
+- The App Store client MUST speak only the stable **PiOS Protocol**, never an
+  unversioned Pi wire format.
 - The gateway MUST contain replaceable, version-pinned `PiDriver` adapters.
 - The production target SHOULD be the new server-owned Harness architecture, not
   a remote facade over an independently running terminal process.
@@ -173,7 +173,7 @@ The gateway therefore terminates WSS, authenticates the device, and connects
 locally to Pi's Unix socket. It is an application boundary, not merely a reverse
 proxy:
 
-- It converts a pinned Pi protocol into the stable Pi Mobile Protocol.
+- It converts a pinned Pi protocol into the stable PiOS Protocol.
 - It negotiates capabilities rather than assuming a particular upstream branch.
 - It normalizes snapshots and progress into a stable mobile domain model.
 - It owns device enrollment, revocation, rate limits, push registration, and
@@ -228,12 +228,12 @@ The gateway MUST reject startup when Pi package versions do not match the
 selected driver's lockfile. It MUST report the detected Pi commit/package
 version and advertised feature flags to the app.
 
-## 5. Stable Pi Mobile Protocol
+## 5. Stable PiOS Protocol
 
 ### 5.1 Encoding and transport
 
 Use one binary Protobuf `Envelope` per WebSocket binary message, under the
-WebSocket subprotocol `pi-mobile.v1`. SwiftProtobuf generates Swift structs from
+WebSocket subprotocol `pios.v1`. SwiftProtobuf generates Swift structs from
 `.proto` files and supports compact binary serialization; the same schema can
 generate types for other implementation languages. [SWIFT-PROTOBUF]
 
@@ -418,13 +418,12 @@ shared reducer/protocol logic.
 
 ### 7.2 Swift module boundaries
 
-The iOS implementation uses the `PiMobileCore` and `PiMobileApple` local Swift
-packages defined in [[contributing.md#Repository Layout]]. Their module
-boundaries are:
+The iOS implementation uses the `PiOSCore` and `PiOSApple` local Swift packages
+defined in [[contributing.md#Repository Layout]]. Their module boundaries are:
 
 ```text
-PiMobileApp
-|-- PiMobileApple
+PiOSApp
+|-- PiOSApple
 |   |-- AppShell                 navigation, scenes, deep links
 |   |-- HostFeature              pairing, host list, health
 |   |-- SessionListFeature       durable metadata and filters
@@ -433,7 +432,7 @@ PiMobileApp
 |   |-- Persistence              Core Data cache and migrations
 |   |-- MarkdownRendering        AST cache and native views
 |   `-- Security                 Keychain, local authentication, trust
-|-- PiMobileCore
+|-- PiOSCore
 |   |-- SessionDomain            pure value types and reducer
 |   `-- MobileProtocol           generated SwiftProtobuf types and mappings
 `-- TestSupport                  fixtures, fake clocks/transports

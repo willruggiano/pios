@@ -11,8 +11,18 @@
     pkgs,
     ...
   }: {
-    devshells = let
+    devshells = {
+      default = {
+        motd = lib.mkForce "";
+        packages = with pkgs;
+          config.devshells.minimal.packages
+          ++ [
+            namespace-cli # TODO: move to packages/devctl once it exists
+            procps
+          ];
+      };
       minimal = {
+        motd = lib.mkForce "";
         packages = with pkgs; [
           bash
           coreutils
@@ -32,11 +42,9 @@
           inputs'.cpd.packages.default
           jq
           less
-          namespace-cli # TODO: move to packages/devctl once it exists
           nodejs
           patch
           prettier
-          procps
           python3
           ripgrep
           scc
@@ -48,14 +56,9 @@
           which
         ];
       };
-    in {
-      default = {
-        imports = [minimal];
+      namespace = {
         motd = lib.mkForce "";
-      };
-      minimal = {
-        imports = [minimal];
-        motd = lib.mkForce "";
+        packages = config.devshells.minimal.packages ++ [config.packages.pi-unwrapped];
       };
     };
 

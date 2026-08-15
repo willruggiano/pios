@@ -1,0 +1,19 @@
+schema_version = 1
+workspace = ""
+machine_type = "macos/arm64:6x14"
+selectors = ["macos.version=26.x", "image.with=xcode-26"]
+default_ttl = "2h"
+maximum_ttl = "8h"
+purpose = "pios native iOS development"
+remote_root = "/tmp/pios"
+artifact_expiry = "14d"
+
+[release]
+machine_type = "macos/arm64:12x28"
+ttl = "2h"
+
+[cache]
+enabled = false
+tag = "pios-xcode-v1"
+minimum_size = "50gb"
+mount_point = "/cache"

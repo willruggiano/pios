@@ -2,6 +2,8 @@
   perSystem = {
     config,
     inputs',
+    lib,
+    pkgs,
     ...
   }: {
     devshells.default.packages = [config.packages.pi];
@@ -21,17 +23,20 @@
       };
     };
 
-    packages = {
-      pi = let
-        drv = config.jail.programs.pi.build.wrapped;
-      in
-        drv
-        // {
-          name = "${config.packages.pi-unwrapped.name}-jailed";
-          unjailed = config.packages.pi-unwrapped;
-        };
-
-      pi-unwrapped = inputs'.agents.packages.pi;
-    };
+    packages = lib.mkMerge [
+      {
+        pi-unwrapped = inputs'.agents.packages.pi;
+      }
+      (lib.mkIf pkgs.stdenv.hostPlatform.isLinux {
+        pi = let
+          drv = config.jail.programs.pi.build.wrapped;
+        in
+          drv
+          // {
+            name = "${config.packages.pi-unwrapped.name}-jailed";
+            unjailed = config.packages.pi-unwrapped;
+          };
+      })
+    ];
   };
 }
