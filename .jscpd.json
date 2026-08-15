@@ -1,0 +1,11 @@
+{
+  "format": [
+    "swift"
+  ],
+  "minTokens": 100,
+  "reporters": [
+    "ai"
+  ],
+  "threshold": 0,
+  "gitignore": true
+}
