@@ -18,12 +18,12 @@ repository-wide modules:
 
 ```text
 flake.nix
-└── imports
-    ├── nix/jailed.nix
-    ├── nix/formatter.nix
-    ├── nix/checks/
-    └── nix/dev/
-        └── pi/
+`-- imports
+    |-- nix/jailed.nix
+    |-- nix/formatter.nix
+    |-- nix/checks/
+    `-- nix/dev/
+        `-- pi/
 ```
 
 Package derivations belong in `packages/<name>/default.nix`, as defined in

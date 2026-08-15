@@ -79,7 +79,7 @@ Therefore:
   an unversioned Pi wire format.
 - The gateway MUST contain replaceable, version-pinned `PiDriver` adapters.
 - The production target SHOULD be the new server-owned Harness architecture, not
-  a remote façade over an independently running terminal process.
+  a remote facade over an independently running terminal process.
 - A normal terminal session is remotely continuable only when its Harness is
   owned by the server or explicitly handed off to it. Attaching to the same
   JSONL file from a second, separately owned runtime is not considered
@@ -189,8 +189,8 @@ driver import the exact upstream Pi client/protocol packages instead of
 reimplementing their CBOR schemas and session lifecycle in a second systems
 language. Pi's published client is transport-neutral, and its explicit Unix
 subpath provides the local socket transport the gateway needs. [PI-084-CLIENT]
-The stable `.proto` file—not shared runtime code—is the cross-language contract
-with Swift.
+The stable `.proto` file--not shared runtime code--is the cross-language
+contract with Swift.
 
 ### 4.3 Pi driver boundary
 
@@ -359,12 +359,12 @@ callers to repeat only safe control-plane actions. [PI-DEV-CLIENT]
 
 Command UI states are:
 
-- `queuedLocally` — not yet written to the socket;
-- `sentAwaitingAck` — delivery outcome can still become ambiguous;
-- `acknowledged` — gateway durably recorded the mutation and began dispatch, but
-  no definitive Pi result has arrived;
-- `rejected` — structured terminal error; or
-- `outcomeUnknown` — transport failed before a definitive response.
+- `queuedLocally` -- not yet written to the socket;
+- `sentAwaitingAck` -- delivery outcome can still become ambiguous;
+- `acknowledged` -- gateway durably recorded the mutation and began dispatch,
+  but no definitive Pi result has arrived;
+- `rejected` -- structured terminal error; or
+- `outcomeUnknown` -- transport failed before a definitive response.
 
 After `outcomeUnknown`, the app reconnects, resnapshots, and asks the user to
 decide whether to retry. `list`, `attach`, and `snapshot` MAY be repeated
@@ -424,19 +424,19 @@ boundaries are:
 
 ```text
 PiMobileApp
-├── PiMobileApple
-│   ├── AppShell                 navigation, scenes, deep links
-│   ├── HostFeature              pairing, host list, health
-│   ├── SessionListFeature       durable metadata and filters
-│   ├── SessionFeature           transcript, composer, controls
-│   ├── RemoteTransport          WSS actor, correlation, reconnect
-│   ├── Persistence              Core Data cache and migrations
-│   ├── MarkdownRendering        AST cache and native views
-│   └── Security                 Keychain, local authentication, trust
-├── PiMobileCore
-│   ├── SessionDomain            pure value types and reducer
-│   └── MobileProtocol           generated SwiftProtobuf types and mappings
-└── TestSupport                  fixtures, fake clocks/transports
+|-- PiMobileApple
+|   |-- AppShell                 navigation, scenes, deep links
+|   |-- HostFeature              pairing, host list, health
+|   |-- SessionListFeature       durable metadata and filters
+|   |-- SessionFeature           transcript, composer, controls
+|   |-- RemoteTransport          WSS actor, correlation, reconnect
+|   |-- Persistence              Core Data cache and migrations
+|   |-- MarkdownRendering        AST cache and native views
+|   `-- Security                 Keychain, local authentication, trust
+|-- PiMobileCore
+|   |-- SessionDomain            pure value types and reducer
+|   `-- MobileProtocol           generated SwiftProtobuf types and mappings
+`-- TestSupport                  fixtures, fake clocks/transports
 ```
 
 Feature modules depend inward on `SessionDomain`; they do not depend directly on
@@ -459,7 +459,7 @@ The app MUST:
   `(itemID, contentHash)`;
 - throttle streaming view publication to the display cadence;
 - defer syntax highlighting for off-screen code blocks;
-- cap expanded tool-output rendering and provide an explicit “show more”; and
+- cap expanded tool-output rendering and provide an explicit "show more"; and
 - preserve scroll position unless the user is already near the bottom.
 
 The app MUST NOT rebuild a single monolithic attributed string for the full
@@ -482,8 +482,8 @@ unavailable while the device is locked; Apple documents that this protection
 stores files encrypted on disk and blocks access while locked.
 [APPLE-FILE-PROTECTION]
 
-Apply bounded retention by host, session count, total bytes, and age. “Clear
-cached session data” and “Remove host” MUST be separate actions; removing a host
+Apply bounded retention by host, session count, total bytes, and age. "Clear
+cached session data" and "Remove host" MUST be separate actions; removing a host
 deletes its cache and credentials but does not delete anything on the Pi host.
 
 ## 8. Background execution and notifications
@@ -506,7 +506,7 @@ The gateway sends only these push classes:
 - host/server status changed, if the user opts in.
 
 Push payloads contain an opaque host ID, opaque session ID, event class, and
-collapse identifier—never prompts, model output, paths, tool arguments,
+collapse identifier--never prompts, model output, paths, tool arguments,
 filenames, or error text. Opening a notification launches the app, authenticates
 locally if configured, reconnects, and resnapshots before displaying current
 content.
@@ -612,7 +612,7 @@ creates/retains a Harness. [PI-DEV-PROTOCOL] [PI-DEV-HOSTED]
 
 Show session name when available, repository/working-directory label when
 available, update time when available, and a stale badge for cached data. Do not
-synthesize “running” from metadata. Runtime phase appears only after attach and
+synthesize "running" from metadata. Runtime phase appears only after attach and
 snapshot.
 
 ### 10.3 Session screen
@@ -693,7 +693,7 @@ this a release requirement. [PI-084-PROTOCOL] [PI-DEV-PROTOCOL]
 
 ## 13. Delivery tasks
 
-### Task 0 — establish the real server contract
+### Task 0 -- establish the real server contract
 
 1. Decide whether the prototype pins published 0.84.1 or contributes to the
    replacement `dev` protocol.
@@ -708,7 +708,7 @@ This task is blocking for the product promise. The current `dev` server can list
 and attach only, and its demo Harness is merely a close-capable session owner
 pending remote Harness methods. [PI-DEV-PROTOCOL] [PI-DEV-RUNTIME]
 
-### Task 1 — local-network read/control prototype
+### Task 1 -- local-network read/control prototype
 
 - Implement `Pi084Driver` or the newly completed `PiHarnessDriver`.
 - Implement gateway WSS, pairing, capabilities, snapshots, progress, and
@@ -718,7 +718,7 @@ pending remote Harness methods. [PI-DEV-PROTOCOL] [PI-DEV-RUNTIME]
   authenticated reverse proxy.
 - No APNs or public relay yet.
 
-### Task 2 — production hardening
+### Task 2 -- production hardening
 
 - Add device revocation, certificate continuity, rate/size limits, encrypted
   cache retention, diagnostics, full conformance/chaos tests, and
@@ -727,7 +727,7 @@ pending remote Harness methods. [PI-DEV-PROTOCOL] [PI-DEV-RUNTIME]
 - Ship TestFlight only after server restarts, ambiguous mutation delivery, and
   Pi-version downgrade behavior are verified.
 
-### Task 3 — optional outbound relay
+### Task 3 -- optional outbound relay
 
 If zero-inbound-port setup becomes a product requirement, add an opaque relay
 through which both the host gateway and iOS app make outbound TLS connections.

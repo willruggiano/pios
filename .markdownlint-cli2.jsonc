@@ -1,9 +1,12 @@
 {
-  // Lint the Markdown this project authors; vendored .claude/ skills are excluded.
-  "globs": ["README.md", "docs/**/*.md"],
+  // Lint all Markdown this project authors; vendored .claude/ skills are excluded.
+  "globs": ["AGENTS.md", "README.md", ".agents/**/*.md", "docs/**/*.md"],
 
-  // documentation.md: internal references must use [[file.md]] wiki-links.
-  "customRules": ["./tools/markdownlint/wiki-link.cjs"],
+  // documentation.md: enforce wiki links and ASCII-only text.
+  "customRules": [
+    "./tools/markdownlint/ascii-only.cjs",
+    "./tools/markdownlint/wiki-link.cjs",
+  ],
 
   "config": {
     // Disable rules that Prettier already owns.
@@ -15,6 +18,6 @@
 
     // documentation.md: fenced code blocks must declare a language.
     "MD040": { "language_only": true }, // fenced-code-language
-    "MD046": { "style": "fenced" } // code-block-style
-  }
+    "MD046": { "style": "fenced" }, // code-block-style
+  },
 }

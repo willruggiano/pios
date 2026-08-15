@@ -357,27 +357,27 @@ are defined in [[contributing.md#Makefile Interface]]. Targets that need Apple
 tooling call `pimobile-devctl`; the remote helper then invokes the same
 package-owned scripts used by an interactive shell.
 
-| Command                                     | Runs on                    | Contract                                                                                        |
-| ------------------------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------- |
-| `make -C packages/protocol generate`        | NixOS                      | Regenerate Protobuf sources and fixtures.                                                       |
-| `make -C packages/ios test`                 | NixOS                      | Run all portable Swift unit and property tests.                                                 |
-| `make -C packages/gateway test`             | NixOS                      | Run gateway unit, protocol, security, and Pi-driver contract tests.                             |
-| `make -C packages/devctl test`              | NixOS                      | Run controller unit, fake-API, state-machine, and redaction tests without creating an instance. |
-| `make -C packages/gateway build`            | NixOS                      | Build the production gateway deliverable.                                                       |
-| `make dev-up`                               | NixOS → Namespace          | Create or adopt the project's development Mac after explicit cost confirmation.                 |
-| `make dev-status`                           | NixOS → Namespace          | Show instance ID, shape, image facts, deadline, commit, and dirty/sync state.                   |
-| `make dev-shell` / `make dev-vnc`           | NixOS → Namespace          | Open a private shell or Namespace VNC session on the active instance.                           |
-| `make dev-extend DURATION=2h`               | NixOS → Namespace          | Extend within the configured maximum after confirmation.                                        |
-| `make dev-down`                             | NixOS → Namespace          | Retrieve pending logs, destroy the exact managed instance, and clear local state.               |
-| `make dev-gc`                               | NixOS → Namespace          | Find and destroy only expired/orphaned instances carrying this project's management labels.     |
-| `make build-ios`                            | NixOS → Namespace          | Sync the exact commit and compile the full app for the pinned simulator without signing.        |
-| `make test-ios`                             | NixOS → Namespace          | Build once and run the pull-request test plan; retrieve `.xcresult`.                            |
-| `make test-ui`                              | NixOS → Namespace          | Run deterministic UI and accessibility smoke tests.                                             |
-| `make test-performance`                     | NixOS → Namespace          | Run release-mode performance tests on the configured shape and recorded chip class.             |
-| `make archive VERSION=… BUILD=…`            | NixOS → one-shot Namespace | Produce and validate a signed `.xcarchive` and `.ipa`, then retrieve them.                      |
-| `make upload-testflight VERSION=… BUILD=…`  | NixOS → one-shot Namespace | Upload the already validated archive; never rebuild it.                                         |
-| `make release-testflight VERSION=… BUILD=…` | NixOS → one-shot Namespace | Create, sign, archive, validate, upload, retrieve, and destroy with cleanup on every exit.      |
-| `make check-all`                            | NixOS → Namespace          | Run local gates and add a paid Namespace simulator run.                                         |
+| Command                                         | Runs on                     | Contract                                                                                        |
+| ----------------------------------------------- | --------------------------- | ----------------------------------------------------------------------------------------------- |
+| `make -C packages/protocol generate`            | NixOS                       | Regenerate Protobuf sources and fixtures.                                                       |
+| `make -C packages/ios test`                     | NixOS                       | Run all portable Swift unit and property tests.                                                 |
+| `make -C packages/gateway test`                 | NixOS                       | Run gateway unit, protocol, security, and Pi-driver contract tests.                             |
+| `make -C packages/devctl test`                  | NixOS                       | Run controller unit, fake-API, state-machine, and redaction tests without creating an instance. |
+| `make -C packages/gateway build`                | NixOS                       | Build the production gateway deliverable.                                                       |
+| `make dev-up`                                   | NixOS -> Namespace          | Create or adopt the project's development Mac after explicit cost confirmation.                 |
+| `make dev-status`                               | NixOS -> Namespace          | Show instance ID, shape, image facts, deadline, commit, and dirty/sync state.                   |
+| `make dev-shell` / `make dev-vnc`               | NixOS -> Namespace          | Open a private shell or Namespace VNC session on the active instance.                           |
+| `make dev-extend DURATION=2h`                   | NixOS -> Namespace          | Extend within the configured maximum after confirmation.                                        |
+| `make dev-down`                                 | NixOS -> Namespace          | Retrieve pending logs, destroy the exact managed instance, and clear local state.               |
+| `make dev-gc`                                   | NixOS -> Namespace          | Find and destroy only expired/orphaned instances carrying this project's management labels.     |
+| `make build-ios`                                | NixOS -> Namespace          | Sync the exact commit and compile the full app for the pinned simulator without signing.        |
+| `make test-ios`                                 | NixOS -> Namespace          | Build once and run the pull-request test plan; retrieve `.xcresult`.                            |
+| `make test-ui`                                  | NixOS -> Namespace          | Run deterministic UI and accessibility smoke tests.                                             |
+| `make test-performance`                         | NixOS -> Namespace          | Run release-mode performance tests on the configured shape and recorded chip class.             |
+| `make archive VERSION=... BUILD=...`            | NixOS -> one-shot Namespace | Produce and validate a signed `.xcarchive` and `.ipa`, then retrieve them.                      |
+| `make upload-testflight VERSION=... BUILD=...`  | NixOS -> one-shot Namespace | Upload the already validated archive; never rebuild it.                                         |
+| `make release-testflight VERSION=... BUILD=...` | NixOS -> one-shot Namespace | Create, sign, archive, validate, upload, retrieve, and destroy with cleanup on every exit.      |
+| `make check-all`                                | NixOS -> Namespace          | Run local gates and add a paid Namespace simulator run.                                         |
 
 Scripts MUST be non-interactive except for cost confirmation, first-time browser
 login, and explicitly named release provisioning. They MUST preserve raw tool
@@ -510,17 +510,14 @@ with mode `0600`, contains only:
 ```json
 {
   "schemaVersion": 1,
-  "instanceId": "…",
-  "uniqueTag": "pi-mobile-…",
-  "createdAt": "…",
-  "deadline": "…",
+  "instanceId": "...",
+  "uniqueTag": "pi-mobile-...",
+  "createdAt": "...",
+  "deadline": "...",
   "shape": "macos/arm64:6x14",
-  "selectors": [
-    "macos.version=26.x",
-    "image.with=xcode-26"
-  ],
-  "remoteHelperDigest": "sha256:…",
-  "lastCommit": "…"
+  "selectors": ["macos.version=26.x", "image.with=xcode-26"],
+  "remoteHelperDigest": "sha256:...",
+  "lastCommit": "..."
 }
 ```
 
@@ -624,7 +621,7 @@ sole copy.
 - Start, ready, extend, and destroy events are recorded in a local JSONL audit
   log without credentials or source paths.
 - A weekly scheduled `dev-gc --apply` is recommended on the NixOS workstation,
-  but the provider TTL—not that schedule—is the primary cost ceiling.
+  but the provider TTL--not that schedule--is the primary cost ceiling.
 
 ### 7.8 Controller tests
 
@@ -795,7 +792,7 @@ duration.
 ### 8.7 Physical-device acceptance through TestFlight
 
 A simulator cannot establish release readiness, and the Namespace Mac has no
-path to the user's USB-connected iPhone. Every candidate therefore passes G0–G6,
+path to the user's USB-connected iPhone. Every candidate therefore passes G0-G6,
 uploads to the internal TestFlight group, and is then installed on a real iPhone
 for G7. The upload is a candidate, not a promoted beta.
 
@@ -982,7 +979,7 @@ destroyed.
 For the first release, `pimobile-devctl` keeps the one-shot release instance
 alive within its deadline and opens Namespace VNC. Open the remote `.xcarchive`
 in Xcode Organizer, choose **Validate App**, inspect every warning, then choose
-**Distribute App → App Store Connect → Upload**. Xcode's distribution workflow
+**Distribute App -> App Store Connect -> Upload**. Xcode's distribution workflow
 creates and validates archives before upload. [APPLE-DISTRIBUTION] Namespace
 documents dashboard and CLI VNC for macOS runners. [NS-MACOS]
 
@@ -1011,7 +1008,7 @@ After processing:
 1. Resolve the build's encryption/export-compliance status. Apple allows the
    applicable declaration to be represented in the app configuration or answered
    for the beta build. [APPLE-EXPORT-COMPLIANCE]
-2. Add the build to the internal tester group and provide “What to Test” notes.
+2. Add the build to the internal tester group and provide "What to Test" notes.
 3. Install the build from the TestFlight app on the physical release-test
    iPhone.
 4. Pair it with a staging gateway, attach to a synthetic Pi session, receive
@@ -1033,33 +1030,30 @@ Every Mac build writes `build-manifest.json` containing at least:
 ```json
 {
   "schemaVersion": 1,
-  "gitCommit": "…",
-  "gitTree": "…",
+  "gitCommit": "...",
+  "gitTree": "...",
   "dirty": false,
   "xcodeVersion": "26.6",
-  "xcodeBuild": "…",
-  "swiftVersion": "6.3…",
+  "xcodeBuild": "...",
+  "swiftVersion": "6.3...",
   "iosSdkVersion": "26.5",
-  "macosVersion": "…",
+  "macosVersion": "...",
   "hostArchitecture": "arm64",
-  "namespaceInstanceId": "…",
+  "namespaceInstanceId": "...",
   "namespaceShape": "macos/arm64:12x28",
-  "namespaceSelectors": [
-    "macos.version=26.x",
-    "image.with=xcode-26"
-  ],
-  "namespaceImage": "…",
-  "appleChip": "…",
-  "pimobileDevctlVersion": "…",
-  "remoteHelperDigest": "sha256:…",
-  "nscVersion": "…",
+  "namespaceSelectors": ["macos.version=26.x", "image.with=xcode-26"],
+  "namespaceImage": "...",
+  "appleChip": "...",
+  "pimobileDevctlVersion": "...",
+  "remoteHelperDigest": "sha256:...",
+  "nscVersion": "...",
   "configuration": "Release",
   "marketingVersion": "0.1.0",
   "buildNumber": "1",
-  "flakeLockSha256": "…",
-  "packageResolvedSha256": "…",
-  "packageLockSha256": "…",
-  "protocolSchemaSha256": "…",
+  "flakeLockSha256": "...",
+  "packageResolvedSha256": "...",
+  "packageLockSha256": "...",
+  "protocolSchemaSha256": "...",
   "piDrivers": [],
   "testResults": [],
   "artifacts": []
@@ -1091,7 +1085,7 @@ Toolchain upgrades are explicit pull requests:
    requirements.
 4. Regenerate no source unless the compiler or dependency update genuinely
    requires it.
-5. Run G0–G6 on the candidate. Run old and new in parallel only if Namespace
+5. Run G0-G6 on the candidate. Run old and new in parallel only if Namespace
    still exposes selectors resolving to both exact toolchains; the plan does not
    assume old images remain available.
 6. Review warnings, concurrency diagnostics, UI golden changes, archive
@@ -1108,7 +1102,7 @@ TestFlight build inputs automatically.
 
 ## 14. Inception-to-TestFlight tasks
 
-### Task M0 — build spine before product code
+### Task M0 -- build spine before product code
 
 - Commit the flake, lockfile, root and package Makefiles, Namespace config,
   controller/remote Go module, toolchain pin, thin Xcode project, shared scheme,
@@ -1117,19 +1111,19 @@ TestFlight build inputs automatically.
   and `make build-ios` green.
 - Exercise create, readiness, exact image doctor, upload/download, interrupt
   cleanup, explicit destroy, and label-scoped garbage collection.
-- Complete the Apple account prerequisites in §5.3 early enough to use the
-  minimal app as a signing/upload proof; this intentionally front-loads the only
-  undocumented part of the Namespace release path.
-- Complete the provider qualification in §2.2, including a throwaway internal
-  TestFlight upload. If signing or upload is blocked by Namespace, stop and
-  implement the `RemoteMac` adapter against another rented Apple-hardware
+- Complete the Apple account prerequisites in Section 5.3 early enough to use
+  the minimal app as a signing/upload proof; this intentionally front-loads the
+  only undocumented part of the Namespace release path.
+- Complete the provider qualification in Section 2.2, including a throwaway
+  internal TestFlight upload. If signing or upload is blocked by Namespace, stop
+  and implement the `RemoteMac` adapter against another rented Apple-hardware
   provider before product code.
 
-**Exit:** a “Hello, Pi” SwiftUI app compiles in the pinned simulator and
+**Exit:** a "Hello, Pi" SwiftUI app compiles in the pinned simulator and
 installs from TestFlight, all from commands issued on NixOS; the Namespace
 instance is confirmed destroyed afterward.
 
-### Task M1 — stable protocol and gateway skeleton
+### Task M1 -- stable protocol and gateway skeleton
 
 - Add Protobuf generation and drift checks.
 - Package the gateway as a Nix derivation and NixOS module.
@@ -1138,16 +1132,16 @@ instance is confirmed destroyed afterward.
 **Exit:** the simulator app and NixOS gateway complete hello/list/attach using
 fixtures without live Pi.
 
-### Task M2 — state and rendering correctness
+### Task M2 -- state and rendering correctness
 
 - Implement `PiMobileCore` reducer and property tests on NixOS.
 - Implement Apple transport, persistence, security, and UI adapters.
 - Establish UI, accessibility, migration, and large-transcript test suites.
 
-**Exit:** G0–G4 pass and the simulator survives all snapshot/progress/reconnect
+**Exit:** G0-G4 pass and the simulator survives all snapshot/progress/reconnect
 cases.
 
-### Task M3 — real Pi contract
+### Task M3 -- real Pi contract
 
 - Freeze the selected Pi revisions.
 - Run gateway driver contract tests against real upstream servers.
@@ -1157,7 +1151,7 @@ cases.
 **Exit:** G3 passes without production credentials or data; the device portion
 is repeated in G7 on the release candidate.
 
-### Task M4 — release infrastructure
+### Task M4 -- release infrastructure
 
 - Finalize the production App ID/app record, signing material, APNs, TestFlight
   group, and export-compliance data first exercised by the Task M0 qualification
@@ -1169,7 +1163,7 @@ is repeated in G7 on the release candidate.
 **Exit:** G6 passes and the archive is uploadable without changing source or
 project settings in Xcode.
 
-### Task M5 — TestFlight
+### Task M5 -- TestFlight
 
 - Upload the exact validated archive.
 - Wait for Complete status, resolve compliance, add the internal group, install,
@@ -1202,7 +1196,7 @@ The build system is complete only when:
    builder jobs.
 10. Every TestFlight upload is traceable to one clean commit, test-result set,
     archive, manifest, and immutable artifact hash.
-11. The uploaded archive—not a rebuild—installs from TestFlight and passes the
+11. The uploaded archive--not a rebuild--installs from TestFlight and passes the
     physical-device smoke test.
 12. A lost NixOS process cannot leave an unlimited instance: every instance has
     a provider deadline, matching labels, recoverable state, idempotent destroy,
@@ -1218,26 +1212,39 @@ The build system is complete only when:
 [APPLE-XCODE-LICENSE]: https://www.apple.com/legal/sla/docs/xcode.pdf
 [APPLE-XCODE-MATRIX]: https://developer.apple.com/xcode/system-requirements
 [APPLE-DEVELOPER-PROGRAM]: https://developer.apple.com/programs/
-[APPLE-PROVISIONING]: https://developer.apple.com/help/account/provisioning-profiles/create-an-app-store-provisioning-profile
-[APPLE-ASC-WORKFLOW]: https://developer.apple.com/help/app-store-connect/get-started/app-store-connect-workflow
-[APPLE-ASC-KEYS]: https://developer.apple.com/documentation/appstoreconnectapi/creating-api-keys-for-app-store-connect-api
+[APPLE-PROVISIONING]:
+  https://developer.apple.com/help/account/provisioning-profiles/create-an-app-store-provisioning-profile
+[APPLE-ASC-WORKFLOW]:
+  https://developer.apple.com/help/app-store-connect/get-started/app-store-connect-workflow
+[APPLE-ASC-KEYS]:
+  https://developer.apple.com/documentation/appstoreconnectapi/creating-api-keys-for-app-store-connect-api
 [APPLE-TESTING]: https://developer.apple.com/documentation/xcode/testing
-[APPLE-TEST-PLANS]: https://developer.apple.com/documentation/xcode/organizing-tests-to-improve-feedback
-[APPLE-PERFORMANCE-TESTS]: https://developer.apple.com/documentation/xcode/writing-and-running-performance-tests
-[APPLE-DISTRIBUTION]: https://developer.apple.com/documentation/xcode/distributing-your-app-for-beta-testing-and-releases
-[APPLE-XCODEBUILD]: https://developer.apple.com/library/archive/technotes/tn2339/_index.html
-[APPLE-UPLOAD]: https://developer.apple.com/help/app-store-connect/manage-builds/upload-builds/
-[APPLE-BUILD-STATUS]: https://developer.apple.com/help/app-store-connect/manage-builds/view-builds-and-metadata/
-[APPLE-EXPORT-COMPLIANCE]: https://developer.apple.com/help/app-store-connect/test-a-beta-version/provide-export-compliance-information-for-beta-builds/
-[APPLE-TESTFLIGHT]: https://developer.apple.com/help/app-store-connect/test-a-beta-version/testflight-overview/
-[APPLE-XCODE-CLOUD]: https://developer.apple.com/documentation/xcode/distributing-your-xcode-cloud-builds-through-testflight
+[APPLE-TEST-PLANS]:
+  https://developer.apple.com/documentation/xcode/organizing-tests-to-improve-feedback
+[APPLE-PERFORMANCE-TESTS]:
+  https://developer.apple.com/documentation/xcode/writing-and-running-performance-tests
+[APPLE-DISTRIBUTION]:
+  https://developer.apple.com/documentation/xcode/distributing-your-app-for-beta-testing-and-releases
+[APPLE-XCODEBUILD]:
+  https://developer.apple.com/library/archive/technotes/tn2339/_index.html
+[APPLE-UPLOAD]:
+  https://developer.apple.com/help/app-store-connect/manage-builds/upload-builds/
+[APPLE-BUILD-STATUS]:
+  https://developer.apple.com/help/app-store-connect/manage-builds/view-builds-and-metadata/
+[APPLE-EXPORT-COMPLIANCE]:
+  https://developer.apple.com/help/app-store-connect/test-a-beta-version/provide-export-compliance-information-for-beta-builds/
+[APPLE-TESTFLIGHT]:
+  https://developer.apple.com/help/app-store-connect/test-a-beta-version/testflight-overview/
+[APPLE-XCODE-CLOUD]:
+  https://developer.apple.com/documentation/xcode/distributing-your-xcode-cloud-builds-through-testflight
 [SWIFT-PLATFORMS]: https://www.swift.org/platform-support/
 [SWIFTPM]: https://docs.swift.org/swiftpm/documentation/packagemanagerdocs/
 [NS-MACOS]: https://namespace.so/docs/architecture/compute/macos
 [NS-SHAPES]: https://namespace.so/docs/architecture/compute/machine-shapes
 [NS-API-SDK]: https://namespace.so/docs/reference/api-sdk
 [NS-GO-SDK]: https://github.com/namespacelabs/integrations
-[NS-MACRUN]: https://github.com/namespacelabs/integrations/blob/main/examples/macrun/macrun.go
+[NS-MACRUN]:
+  https://github.com/namespacelabs/integrations/blob/main/examples/macrun/macrun.go
 [NS-CLI-INSTALL]: https://namespace.so/docs/reference/cli/installation
 [NS-CREATE]: https://namespace.so/docs/reference/cli/create
 [NS-DESTROY]: https://namespace.so/docs/reference/cli/destroy

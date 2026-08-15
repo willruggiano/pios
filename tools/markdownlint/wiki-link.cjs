@@ -1,11 +1,6 @@
-// Custom markdownlint rule: internal references between docs must use the
-// [[file.md]] wiki-link form (see docs/rules/documentation.md), not a relative
-// Markdown link to another .md file. External links and in-page anchors are fine.
-
 module.exports = {
   names: ["docs-wiki-link"],
-  description:
-    "Internal doc references must use [[file.md]] wiki-links, not relative Markdown links",
+  description: "Internal doc references must use [[wiki-link]] format.",
   tags: ["links"],
   parser: "none",
   function: (params, onError) => {

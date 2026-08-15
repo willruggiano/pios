@@ -38,61 +38,61 @@ The repository MUST converge on this layout:
 
 ```text
 .
-├── .agents/
-│   ├── agents.md
-│   ├── bin/
-│   └── rules/ -> docs/rules
-├── AGENTS.md -> .agents/agents.md
-├── README.md
-├── Makefile
-├── flake.nix
-├── flake.lock
-├── docs/
-│   ├── architecture.md
-│   ├── build.md
-│   ├── contributing.md
-│   └── rules/
-├── packages/
-│   ├── protocol/
-│   │   ├── default.nix
-│   │   ├── Makefile
-│   │   ├── pi_mobile.proto
-│   │   ├── buf.yaml
-│   │   └── fixtures/
-│   ├── gateway/
-│   │   ├── default.nix
-│   │   ├── Makefile
-│   │   ├── package.json
-│   │   ├── package-lock.json
-│   │   ├── upstream/
-│   │   │   └── pi.lock.json
-│   │   ├── src/
-│   │   └── test/
-│   ├── ios/
-│   │   ├── default.nix
-│   │   ├── Makefile
-│   │   ├── Config/
-│   │   ├── PiMobile.xcodeproj/
-│   │   ├── PiMobileApp/
-│   │   ├── Packages/
-│   │   │   ├── PiMobileCore/
-│   │   │   └── PiMobileApple/
-│   │   ├── TestPlans/
-│   │   └── Tests/
-│   └── devctl/
-│       ├── default.nix
-│       ├── Makefile
-│       ├── Config/
-│       │   └── namespace.toml
-│       ├── go.mod
-│       ├── go.sum
-│       ├── cmd/
-│       ├── internal/
-│       ├── scripts/
-│       ├── .state/
-│       └── artifacts/
-├── nix/
-└── tools/
+|-- .agents/
+|   |-- agents.md
+|   |-- bin/
+|   `-- rules/ -> docs/rules
+|-- AGENTS.md -> .agents/agents.md
+|-- README.md
+|-- Makefile
+|-- flake.nix
+|-- flake.lock
+|-- docs/
+|   |-- architecture.md
+|   |-- build.md
+|   |-- contributing.md
+|   `-- rules/
+|-- packages/
+|   |-- protocol/
+|   |   |-- default.nix
+|   |   |-- Makefile
+|   |   |-- pi_mobile.proto
+|   |   |-- buf.yaml
+|   |   `-- fixtures/
+|   |-- gateway/
+|   |   |-- default.nix
+|   |   |-- Makefile
+|   |   |-- package.json
+|   |   |-- package-lock.json
+|   |   |-- upstream/
+|   |   |   `-- pi.lock.json
+|   |   |-- src/
+|   |   `-- test/
+|   |-- ios/
+|   |   |-- default.nix
+|   |   |-- Makefile
+|   |   |-- Config/
+|   |   |-- PiMobile.xcodeproj/
+|   |   |-- PiMobileApp/
+|   |   |-- Packages/
+|   |   |   |-- PiMobileCore/
+|   |   |   `-- PiMobileApple/
+|   |   |-- TestPlans/
+|   |   `-- Tests/
+|   `-- devctl/
+|       |-- default.nix
+|       |-- Makefile
+|       |-- Config/
+|       |   `-- namespace.toml
+|       |-- go.mod
+|       |-- go.sum
+|       |-- cmd/
+|       |-- internal/
+|       |-- scripts/
+|       |-- .state/
+|       `-- artifacts/
+|-- nix/
+`-- tools/
 ```
 
 `packages/devctl/.state/` and `packages/devctl/artifacts/` MUST be ignored and
