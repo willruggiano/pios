@@ -1,6 +1,7 @@
 ---
-paths:
-  - "**/*.rs"
+# TODO: define testing standards once packages exist
+# paths:
+#   - "**/*.rs"
 ---
 
 # Test conventions

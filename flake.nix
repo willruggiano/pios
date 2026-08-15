@@ -43,9 +43,8 @@
       imports = [
         ./nix/jailed.nix
         ./nix/formatter.nix
-        ./nix/packages
         ./nix/checks
-        ./nix/devshell.nix
+        ./nix/dev
       ];
     };
 }

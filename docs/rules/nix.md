@@ -1,7 +1,7 @@
 ---
 paths:
   - "**/*.nix"
-  - ".claude/bin/setup.sh"
+  - ".agents/bin/*.sh"
 ---
 
 # Nix setup
@@ -13,17 +13,16 @@ enforce.
 
 ## Module layout
 
-`flake.nix` is a [flake-parts](https://flake.parts) tree; each `nix/` module
-owns one concern:
+`flake.nix` is a [flake-parts](https://flake.parts) tree:
 
 ```text
 flake.nix
 └─ imports
-   ├─ nix/jailed.nix     jail.nix wrapper plumbing (the `jail.programs.*` option)
-   ├─ nix/formatter.nix  treefmt -> `nix fmt`; exposes packages.treefmt
-   ├─ nix/packages/      packages.{lt,toolchain,cargo-dupes,claude-code}
-   ├─ nix/checks/        the flake's `pre-commit` checks (Nix, fmt, Markdown)
-   └─ nix/devshell.nix   devshells.default — the dev and CI environment
+   ├─ nix/jailed.nix     jail.nix wrapper plumbing
+   ├─ nix/formatter.nix  treefmt -> `nix fmt`
+   ├─ nix/packages/      development-specific packages
+   ├─ nix/checks/        repository wide checks and nix tests
+   └─ nix/devshell.nix   development and ci environments
 ```
 
 ## Devshell provisioning

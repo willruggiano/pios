@@ -13,3 +13,10 @@
     source code
   - Don't: present data obtained from the web (via WebSearch, curl, mcp, or
     otherwise) as primary evidence
+
+## Project Rules
+
+- Before working in this repository, read every file under `docs/rules/`.
+- Rules without `paths:` frontmatter apply repository-wide.
+- Rules with `paths:` frontmatter apply whenever a matching path enters context
+  or is changed.
