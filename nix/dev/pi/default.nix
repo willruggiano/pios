@@ -28,14 +28,7 @@
         pi-unwrapped = inputs'.agents.packages.pi;
       }
       (lib.mkIf pkgs.stdenv.hostPlatform.isLinux {
-        pi = let
-          drv = config.jail.programs.pi.build.wrapped;
-        in
-          drv
-          // {
-            name = "${config.packages.pi-unwrapped.name}-jailed";
-            unjailed = config.packages.pi-unwrapped;
-          };
+        pi = config.jail.programs.pi.build.wrapped;
       })
     ];
   };
