@@ -1,0 +1,252 @@
+#!/bin/bash
+
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+package_root="$(cd "$script_dir/.." && pwd)"
+repository_root="$(git -C "$package_root" rev-parse --show-toplevel)"
+readonly script_dir package_root repository_root
+readonly toolchain_config="$package_root/Config/Toolchain.env"
+readonly project_path="$package_root/PiOS/PiOS.xcodeproj"
+readonly scheme_name=PiOS
+
+MACOS_MINIMUM_VERSION=
+MACOS_VERSION=
+XCODE_VERSION=
+SWIFT_VERSION=
+IOS_SDK_VERSION=
+DEVICE_ARCHITECTURE=
+SIMULATOR_RUNTIME_IDENTIFIER=
+SIMULATOR_DEVICE_TYPE_IDENTIFIER=
+
+fail() {
+  printf 'error: %s\n' "$*" >&2
+  exit 2
+}
+
+load_toolchain() {
+  local key value
+  "$script_dir/check-configuration" "$toolchain_config"
+  while IFS='=' read -r key value; do
+    [[ -z "$key" || "$key" == \#* ]] && continue
+    printf -v "$key" '%s' "$value"
+  done <"$toolchain_config"
+}
+
+matches_family() {
+  [[ "${1%%.*}" == "${2%.x}" ]]
+}
+
+version_at_least() {
+  python3 - "$1" "$2" <<'PY'
+import sys
+
+actual = tuple(map(int, sys.argv[1].split(".")))
+minimum = tuple(map(int, sys.argv[2].split(".")))
+length = max(len(actual), len(minimum))
+raise SystemExit(actual + (0,) * (length - len(actual)) < minimum + (0,) * (length - len(minimum)))
+PY
+}
+
+preflight() {
+  local actual architecture sdk swift xcode
+  load_toolchain
+  [[ -z "$(git -C "$repository_root" status --porcelain=v1 --untracked-files=all)" ]] ||
+    fail "qualification requires a clean source tree"
+
+  architecture="$(uname -m)"
+  [[ "$architecture" == "$DEVICE_ARCHITECTURE" ]] ||
+    fail "host architecture $architecture does not match $DEVICE_ARCHITECTURE"
+
+  actual="$(sw_vers -productVersion)"
+  if [[ "${actual%%.*}" != "${MACOS_VERSION%%.*}" ]] ||
+    ! version_at_least "$actual" "$MACOS_MINIMUM_VERSION"; then
+    fail "macOS $actual is outside the accepted range"
+  fi
+
+  xcode="$(xcodebuild -version | awk 'NR == 1 { print $2 }')"
+  if [[ ! "$xcode" =~ ^[0-9]+([.][0-9]+)+$ ]] ||
+    ! matches_family "$xcode" "$XCODE_VERSION"; then
+    fail "Xcode $xcode is outside the accepted non-beta $XCODE_VERSION family"
+  fi
+
+  swift="$(xcrun swift --version | sed -n 's/.*Apple Swift version \([0-9][0-9.]*\).*/\1/p')"
+  if [[ -z "$swift" ]] || ! matches_family "$swift" "$SWIFT_VERSION"; then
+    fail "Swift $swift is outside the accepted $SWIFT_VERSION family"
+  fi
+
+  sdk="$(xcrun --sdk iphoneos --show-sdk-version)"
+  matches_family "$sdk" "$IOS_SDK_VERSION" ||
+    fail "iOS SDK $sdk is outside the accepted $IOS_SDK_VERSION family"
+}
+
+source_commit() {
+  git -C "$repository_root" rev-parse HEAD
+}
+
+xcode_build() {
+  xcodebuild -version | awk '/Build version/ { print $3 }'
+}
+
+qualification_root() {
+  printf '%s/.build/qualification/%s/%s\n' \
+    "$package_root" "$(source_commit)" "$(xcode_build)"
+}
+
+select_simulator() {
+  python3 - "$SIMULATOR_RUNTIME_IDENTIFIER" "$SIMULATOR_DEVICE_TYPE_IDENTIFIER" <<'PY'
+import json
+import subprocess
+import sys
+
+runtime, device_type = sys.argv[1:]
+name = "PiOS Qualification"
+
+def simctl(*arguments: str) -> str:
+    return subprocess.check_output(("xcrun", "simctl", *arguments), text=True)
+
+runtimes = json.loads(simctl("list", "runtimes", "-j"))["runtimes"]
+matches = [row for row in runtimes if row["identifier"] == runtime and row.get("isAvailable")]
+if len(matches) != 1:
+    raise SystemExit(f"error: configured simulator runtime is unavailable: {runtime}")
+
+types = json.loads(simctl("list", "devicetypes", "-j"))["devicetypes"]
+if len([row for row in types if row["identifier"] == device_type]) != 1:
+    raise SystemExit(f"error: configured simulator device type is unavailable: {device_type}")
+
+devices = json.loads(simctl("list", "devices", "-j"))["devices"]
+named = [(identifier, row) for identifier, rows in devices.items() for row in rows if row["name"] == name]
+if any(identifier != runtime or row.get("deviceTypeIdentifier") != device_type for identifier, row in named):
+    raise SystemExit(f"error: {name} exists with an unconfigured runtime or device type")
+selected = [row for identifier, row in named if identifier == runtime and row.get("isAvailable")]
+if len(selected) > 1:
+    raise SystemExit(f"error: multiple configured {name} simulators exist")
+print(selected[0]["udid"] if selected else simctl("create", name, device_type, runtime).strip())
+PY
+}
+
+run_simulator_action() {
+  local action=$1 derived_data log result root source_packages udid
+  local -a arguments
+  preflight
+  udid="$(select_simulator)"
+  root="$(qualification_root)"
+  derived_data="$root/Debug/$udid/DerivedData"
+  source_packages="$root/SourcePackages"
+  log="$root/logs/$action.log"
+  mkdir -p "$derived_data" "$source_packages" "$(dirname "$log")"
+
+  arguments=(
+    xcodebuild
+    -project "$project_path"
+    -scheme "$scheme_name"
+    -configuration Debug
+    -destination "platform=iOS Simulator,id=$udid"
+    -derivedDataPath "$derived_data"
+    -clonedSourcePackagesDirPath "$source_packages"
+    -disableAutomaticPackageResolution
+    -skipPackageUpdates
+  )
+  if [[ "$action" == test ]]; then
+    result="$root/results/PiOSInfrastructureTests.xcresult"
+    mkdir -p "$(dirname "$result")"
+    rm -rf "$result"
+    arguments+=(
+      -only-testing:PiOSInfrastructureTests
+      -parallel-testing-enabled NO
+      -resultBundlePath "$result"
+    )
+  fi
+  arguments+=(CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO "$action")
+  "${arguments[@]}" 2>&1 | tee "$log"
+}
+
+archive_app() {
+  local archive_path build_number root version
+  [[ $# -eq 2 ]] || fail "usage: archive VERSION BUILD"
+  version=$1
+  build_number=$2
+  [[ "$version" =~ ^(0|[1-9][0-9]*)[.](0|[1-9][0-9]*)[.](0|[1-9][0-9]*)$ ]] ||
+    fail "VERSION must be a three-component semantic version"
+  [[ "$build_number" =~ ^[1-9][0-9]*$ ]] || fail "BUILD must be a positive integer"
+  preflight
+
+  root="$(qualification_root)"
+  archive_path="$root/archives/PiOS-$version+$build_number.xcarchive"
+  mkdir -p "$(dirname "$archive_path")" "$root/Release/DerivedData" "$root/SourcePackages" "$root/logs"
+  rm -rf "$archive_path"
+  xcodebuild \
+    -project "$project_path" \
+    -scheme "$scheme_name" \
+    -configuration Release \
+    -destination generic/platform=iOS \
+    -derivedDataPath "$root/Release/DerivedData" \
+    -archivePath "$archive_path" \
+    -clonedSourcePackagesDirPath "$root/SourcePackages" \
+    -disableAutomaticPackageResolution \
+    -skipPackageUpdates \
+    MARKETING_VERSION="$version" \
+    CURRENT_PROJECT_VERSION="$build_number" \
+    CODE_SIGNING_ALLOWED=NO \
+    CODE_SIGNING_REQUIRED=NO \
+    archive 2>&1 | tee "$root/logs/archive-$version+$build_number.log"
+}
+
+export_archive() {
+  [[ $# -eq 3 ]] || fail "usage: export ARCHIVE EXPORT_OPTIONS_PLIST OUTPUT_DIRECTORY"
+  preflight
+  [[ -d "$1" ]] || fail "archive does not exist: $1"
+  [[ -f "$2" ]] || fail "export options do not exist: $2"
+  [[ ! -e "$3" ]] || fail "output already exists: $3"
+  mkdir -p "$(dirname "$3")"
+  xcodebuild -exportArchive -archivePath "$1" -exportOptionsPlist "$2" -exportPath "$3"
+}
+
+collect_artifacts() {
+  local app output result root udid
+  preflight
+  udid="$(select_simulator)"
+  root="$(qualification_root)"
+  app="$root/Debug/$udid/DerivedData/Build/Products/Debug-iphonesimulator/PiOS.app"
+  result="$root/results/PiOSInfrastructureTests.xcresult"
+  output="$package_root/.artifacts/$(source_commit)/$(xcode_build)"
+  [[ -d "$app" && -d "$result" ]] || fail "build and test artifacts are required"
+  [[ ! -e "$output" ]] || fail "artifact output already exists: $output"
+  mkdir -p "$output"
+  ditto "$app" "$output/PiOS.app"
+  ditto "$result" "$output/PiOSInfrastructureTests.xcresult"
+  python3 - "$output" <<'PY'
+import hashlib
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+rows = []
+for path in sorted(candidate for candidate in root.rglob("*") if candidate.is_file()):
+    rows.append(f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.relative_to(root)}")
+(root / "SHA256SUMS").write_text("\n".join(rows) + "\n")
+PY
+  printf '%s\n' "$output"
+}
+
+[[ $# -ge 1 ]] || fail "usage: qualification OPERATION [ARGUMENTS]"
+readonly operation=$1
+shift
+case "$operation" in
+simulator)
+  [[ $# -eq 0 ]] || fail "usage: simulator"
+  preflight
+  select_simulator
+  ;;
+build | test)
+  [[ $# -eq 0 ]] || fail "usage: $operation"
+  run_simulator_action "$operation"
+  ;;
+archive) archive_app "$@" ;;
+export) export_archive "$@" ;;
+collect-artifacts)
+  [[ $# -eq 0 ]] || fail "usage: collect-artifacts"
+  collect_artifacts
+  ;;
+*) fail "unknown operation: $operation" ;;
+esac

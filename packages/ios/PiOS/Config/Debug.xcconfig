@@ -1,11 +1,8 @@
-//
-//  Debug.xcconfig
-//  PiOS
-//
-//  Created by runner on 8/17/26.
-//
-
-// Configuration settings file format documentation can be found at:
-// https://developer.apple.com/documentation/xcode/adding-a-build-configuration-file-to-your-project
-
 #include "Shared.xcconfig"
+
+DEBUG_INFORMATION_FORMAT = dwarf
+ENABLE_NS_ASSERTIONS = YES
+ENABLE_TESTABILITY = YES
+GCC_OPTIMIZATION_LEVEL = 0
+SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG $(inherited)
+SWIFT_OPTIMIZATION_LEVEL = -Onone

@@ -1,0 +1,83 @@
+#!/usr/bin/env python3
+
+import re
+import sys
+from pathlib import Path
+
+EXPECTED_KEYS = {
+    "MACOS_MINIMUM_VERSION",
+    "MACOS_VERSION",
+    "MACOS_BUILD",
+    "XCODE_VERSION",
+    "XCODE_BUILD",
+    "SWIFT_VERSION",
+    "SWIFT_LANGUAGE_MODE",
+    "IOS_SDK_VERSION",
+    "IOS_DEPLOYMENT_TARGET",
+    "DEVICE_ARCHITECTURE",
+    "SIMULATOR_RUNTIME_IDENTIFIER",
+    "SIMULATOR_DEVICE_TYPE_IDENTIFIER",
+}
+FIXED_VALUES = {
+    "MACOS_MINIMUM_VERSION": "26.2",
+    "XCODE_VERSION": "26.x",
+    "SWIFT_VERSION": "6.x",
+    "SWIFT_LANGUAGE_MODE": "6",
+    "IOS_SDK_VERSION": "26.x",
+    "IOS_DEPLOYMENT_TARGET": "18.0",
+    "DEVICE_ARCHITECTURE": "arm64",
+}
+PATTERNS = {
+    "MACOS_VERSION": r"26\.\d+(?:\.\d+)?",
+    "MACOS_BUILD": r"[0-9A-Z]+",
+    "XCODE_BUILD": r"[0-9A-Z]+",
+    "SIMULATOR_RUNTIME_IDENTIFIER": (
+        r"com\.apple\.CoreSimulator\.SimRuntime\.iOS-26-\d+"
+    ),
+    "SIMULATOR_DEVICE_TYPE_IDENTIFIER": (
+        r"com\.apple\.CoreSimulator\.SimDeviceType\.[A-Za-z0-9-]+"
+    ),
+}
+
+
+def fail(message: str) -> None:
+    print(f"error: {message}", file=sys.stderr)
+    raise SystemExit(2)
+
+
+def main() -> None:
+    if len(sys.argv) > 2:
+        fail("usage: check-configuration [Toolchain.env]")
+
+    default = Path(__file__).resolve().parent.parent / "Config" / "Toolchain.env"
+    path = Path(sys.argv[1]) if len(sys.argv) == 2 else default
+    values: dict[str, str] = {}
+
+    for line_number, raw_line in enumerate(path.read_text().splitlines(), start=1):
+        if not raw_line or raw_line.startswith("#"):
+            continue
+        if raw_line.count("=") != 1:
+            fail(f"{path}:{line_number}: expected KEY=VALUE")
+        key, value = raw_line.split("=", 1)
+        if key in values:
+            fail(f"{path}:{line_number}: duplicate key {key}")
+        if key not in EXPECTED_KEYS:
+            fail(f"{path}:{line_number}: unknown key {key}")
+        if not value:
+            fail(f"{path}:{line_number}: empty value for {key}")
+        values[key] = value
+
+    missing = sorted(EXPECTED_KEYS - values.keys())
+    if missing:
+        fail(f"{path}: missing keys: {', '.join(missing)}")
+
+    for key, expected in FIXED_VALUES.items():
+        if values[key] != expected:
+            fail(f"{path}: {key} must be {expected}")
+    for key, pattern in PATTERNS.items():
+        if re.fullmatch(pattern, values[key]) is None:
+            fail(f"{path}: invalid {key}={values[key]}")
+
+
+if __name__ == "__main__":
+    main()
