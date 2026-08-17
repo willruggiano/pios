@@ -14,6 +14,7 @@
     cfg = config.pre-commit;
   in {
     devshells = {
+      default.devshell.startup.install-git-hooks.text = config.pre-commit.shellHook;
       minimal = {
         packages = [cfg.settings.package];
         devshell.startup.install-git-hooks.text = config.pre-commit.shellHook;

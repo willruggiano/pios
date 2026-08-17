@@ -62,7 +62,7 @@
           config.devshells.minimal.packages
           ++ [
             config.packages.pi-unwrapped
-            git
+            git # n.b. intentionally not in `minimal`
           ];
       };
     };
