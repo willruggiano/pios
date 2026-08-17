@@ -66,7 +66,7 @@
 
     jail.additionalCombinators = cs:
       with cs; [
-        (add-pkg-deps config.devshells.minimal.packages)
+        (add-pkg-deps config.devshells.namespace.packages)
         (readonly (noescape "~/.config/ns"))
         (readwrite (noescape "~/.config/ns/token.cache"))
       ];
