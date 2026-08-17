@@ -11,7 +11,7 @@ paths:
   when the file name is not the desired display.
 - External URLs use standard markdown link syntax:
   `[label](https://example.com)` or `<https://example.com>`.
-- Use ASCII only. Do not use typographic punctuation, Unicode symbols, or emoji.
+- Use ASCII only. This is enforced by markdownlint; do not hand validate.
 - Fenced code blocks always declare a language identifier (`rust`, `sql`, `sh`,
   `text`, ...).
 - One H1 per document at the top. Section headings start at H2 and do not skip
