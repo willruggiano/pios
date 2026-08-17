@@ -17,3 +17,7 @@ everything up through Nix, short of Xcode (but even that we can still _automate_
 through Nix). The remote bootstrap process should be a "deploy nixos
 configuration" action. We probably even want to integrate something like
 sops-nix at some point -- maybe that even solves Pi authentication?
+
+**Binary cache:** The macOS bootstrap process is slow. We can speed it up by
+adding a binary cache and/or a Namespace cache volume, which is automatically
+updated via CI.
