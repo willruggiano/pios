@@ -14,12 +14,7 @@
     devshells = {
       default = {
         motd = lib.mkForce "";
-        packages = with pkgs;
-          config.devshells.minimal.packages
-          ++ [
-            namespace-cli # TODO: move to packages/devctl once it exists
-            procps
-          ];
+        inherit (config.devshells.minimal) packages;
       };
       minimal = {
         motd = lib.mkForce "";
@@ -42,9 +37,11 @@
           jq
           jujutsu
           less
+          namespace-cli # TODO: move to packages/devctl once it exists
           nodejs
           patch
           prettier
+          procps
           python3
           ripgrep
           scc
