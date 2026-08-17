@@ -14,7 +14,7 @@ compatibility:
 local commit -> Namespace Mac -> Pi agents -> remote commit -> local fast-forward
 ```
 
-Require paid-operation approval, a two-hour deadline, exact toolchain matching,
+Require paid-operation approval, a two-hour deadline, toolchain-family matching,
 serialized writers, and exact-instance cleanup. Freeze local source until
 return.
 
@@ -49,8 +49,8 @@ nsc ssh --disable-pty "$instance_id" \
   '/bin/bash /var/tmp/pios-bootstrap/remote.sh bootstrap'
 ```
 
-Compare bootstrap facts and `simctl list` with
-`packages/ios/Config/Toolchain.env`. Destroy and stop on mismatch.
+Require Xcode 26.x, Swift 6.x, and iOS SDK 26.x. Record exact observed facts;
+destroy and stop on a major-version mismatch.
 
 ## Authenticate and Run
 

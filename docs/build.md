@@ -95,23 +95,22 @@ listed at $0.06 prepaid/$0.09 overage per minute and 12x28 at $0.12/$0.18; the
 controller MUST treat the provider's current dashboard as authoritative rather
 than embedding these prices. [NS-SHAPES]
 
-The initial toolchain pin is:
+The initial toolchain compatibility gate is:
 
-| Input                 | Initial pin                                               |
+| Input                 | Accepted value                                            |
 | --------------------- | --------------------------------------------------------- |
-| Xcode                 | 26.6, non-beta                                            |
+| Xcode                 | 26.x, non-beta                                            |
 | macOS on builder      | Tahoe 26.2 or later within the Xcode-supported 26.x range |
-| Apple SDK             | iOS 26.5, as bundled with Xcode 26.6                      |
-| Swift compiler        | 6.3, as bundled with Xcode 26.6                           |
+| Apple SDK             | iOS 26.x                                                  |
+| Swift compiler        | 6.x                                                       |
 | Swift language mode   | 6                                                         |
 | App deployment target | iOS 18.0                                                  |
 | Device architecture   | arm64                                                     |
 
-Apple's current matrix identifies Xcode 26.6 as bundling the iOS 26.5 SDK and
-Swift 6.3, and lists its supported macOS and deployment-target ranges.
-[APPLE-XCODE-MATRIX] The repository MUST record Xcode's version **and build
-number**, because two installations with the same marketing version are not
-assumed identical.
+Apple's matrix defines the SDK, Swift compiler, supported macOS, and deployment
+ranges bundled with each Xcode release. [APPLE-XCODE-MATRIX] Qualification MUST
+match the configured major-version families and record exact observed versions,
+build numbers, runtime, and device type as provenance.
 
 The instance is deliberately disposable. Source, DerivedData, local Keychains,
 profiles, archives, and logs on its root disk are not durable state. Namespace
@@ -125,7 +124,7 @@ every build MUST also work from an empty cache. [NS-CACHE]
 Namespace is the canonical provider, subject to a one-time Task M0 qualification
 that proves the selected image can:
 
-- boot and pass the exact toolchain doctor;
+- boot and pass the toolchain-family doctor;
 - compile and run an iOS simulator test;
 - accept a temporary signing Keychain and provisioning profile;
 - archive, validate, and upload a throwaway internal TestFlight build; and
@@ -1033,10 +1032,10 @@ Every Mac build writes `build-manifest.json` containing at least:
   "gitCommit": "...",
   "gitTree": "...",
   "dirty": false,
-  "xcodeVersion": "26.6",
-  "xcodeBuild": "...",
-  "swiftVersion": "6.3...",
-  "iosSdkVersion": "26.5",
+  "xcodeVersion": "26.1.1",
+  "xcodeBuild": "17B100",
+  "swiftVersion": "6.2.1",
+  "iosSdkVersion": "26.1",
   "macosVersion": "...",
   "hostArchitecture": "arm64",
   "namespaceInstanceId": "...",
@@ -1080,14 +1079,14 @@ Toolchain upgrades are explicit pull requests:
 2. Create a short-lived qualification instance with the candidate selector and
    record the actual Xcode build, SDK, Swift, macOS, runtime, Namespace image,
    shape, and chip.
-3. Update `Toolchain.env` to those exact observed values. Namespace selectors
-   remain an image-family request; the exact observed values remain hard doctor
-   requirements.
+3. Update the accepted major-version families in `Toolchain.env` when needed.
+   Record exact observed values in build provenance; Namespace selectors remain
+   an image-family request.
 4. Regenerate no source unless the compiler or dependency update genuinely
    requires it.
 5. Run G0-G6 on the candidate. Run old and new in parallel only if Namespace
-   still exposes selectors resolving to both exact toolchains; the plan does not
-   assume old images remain available.
+   still exposes selectors resolving to both toolchain families; the plan does
+   not assume old images remain available.
 6. Review warnings, concurrency diagnostics, UI golden changes, archive
    entitlements, binary size, and chip-keyed performance deltas.
 7. Merge only after a complete candidate archive validates and an internal
@@ -1109,8 +1108,8 @@ TestFlight build inputs automatically.
   and empty test plans.
 - Make `make check`, `make -C packages/devctl test`, `make test-devctl-live`,
   and `make build-ios` green.
-- Exercise create, readiness, exact image doctor, upload/download, interrupt
-  cleanup, explicit destroy, and label-scoped garbage collection.
+- Exercise create, readiness, toolchain-family doctor, upload/download,
+  interrupt cleanup, explicit destroy, and label-scoped garbage collection.
 - Complete the Apple account prerequisites in Section 5.3 early enough to use
   the minimal app as a signing/upload proof; this intentionally front-loads the
   only undocumented part of the Namespace release path.

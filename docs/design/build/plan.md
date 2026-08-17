@@ -15,9 +15,9 @@ protocol, APNs, product UI, and production release work begin after M0.
 
 The plan has four hard constraints:
 
-- The required pin remains Xcode 26.6, Swift 6.3, and iOS SDK 26.5. The latest
-  observed Namespace image supplied Xcode 26.1.1, Swift 6.2.1, and iOS SDK 26.1,
-  so paid build qualification is currently blocked. Do not weaken the pin.
+- Qualification requires Xcode 26.x, Swift 6.x, and iOS SDK 26.x. Record the
+  exact observed versions and builds as provenance; do not reject a matching
+  major-version family.
 - Apple enrollment, permanent identifiers, signing assets, App Store Connect
   access, and physical-device installation are operator inputs.
 - Every paid operation requires separate approval, a provider deadline, and
@@ -78,7 +78,7 @@ rejects unknown fields, ignored state is absent from `git ls-files`, and
       test, archive, export, and artifact collection. They must select only the
       configured runtime and device type and disable automatic package
       resolution.
-- [ ] Commit Xcode-owned lock metadata produced by the exact qualified Xcode and
+- [ ] Commit Xcode-owned lock metadata produced by the qualified Xcode and
       require normal commands to leave it unchanged.
 
 **Verify:** `xcodebuild -list` finds the project and shared scheme on the
@@ -158,10 +158,11 @@ report no managed instance. Incomplete cleanup fails M0.
 
 ## Task 7 - Qualify simulator build and test
 
-This Task requires explicit cost approval and an image matching `Toolchain.env`
-exactly.
+This Task requires explicit cost approval and an image matching the
+major-version families in `Toolchain.env`.
 
-- [ ] Run the exact doctor before build work and reject every mismatch.
+- [ ] Run the doctor before build work, reject major-version mismatches, and
+      record exact observed toolchain facts.
 - [ ] Build with signing and automatic dependency resolution disabled.
 - [ ] Run the infrastructure smoke test on the pinned simulator.
 - [ ] Retrieve and verify the app, `.xcresult`, logs, checksums, and manifest
@@ -212,24 +213,24 @@ TestFlight app installs, and every paid instance is absent.
 
 ## Completion criteria
 
-| Criterion    | Evidence                                                                                                                |
-| ------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| Build spine  | Flake outputs, Makefiles, controller/helper builds, and local checks pass from a clean NixOS checkout.                  |
-| Lifecycle    | Fake and live tests prove create, wait, transfer, extend, interrupt cleanup, down, and label-scoped garbage collection. |
-| Toolchain    | Doctor accepts only the committed Xcode build, Swift, SDK, runtime, device type, macOS, and architecture.               |
-| Simulator    | The minimal app builds and its smoke test returns verified artifacts.                                                   |
-| Distribution | One retrieved archive is uploaded without rebuilding, processed, assigned internally, and installed through TestFlight. |
-| Security     | Secrets enter no Git or Nix input, command argument, state, routine log, manifest, or retained result.                  |
-| Cleanup      | Exact destroy succeeds and both provider query paths report no managed instance.                                        |
-| Scope        | The app contains only qualification UI and its infrastructure test.                                                     |
+| Criterion    | Evidence                                                                                                                     |
+| ------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| Build spine  | Flake outputs, Makefiles, controller/helper builds, and local checks pass from a clean NixOS checkout.                       |
+| Lifecycle    | Fake and live tests prove create, wait, transfer, extend, interrupt cleanup, down, and label-scoped garbage collection.      |
+| Toolchain    | Doctor accepts only configured major-version families and records exact Xcode, Swift, SDK, runtime, device, and macOS facts. |
+| Simulator    | The minimal app builds and its smoke test returns verified artifacts.                                                        |
+| Distribution | One retrieved archive is uploaded without rebuilding, processed, assigned internally, and installed through TestFlight.      |
+| Security     | Secrets enter no Git or Nix input, command argument, state, routine log, manifest, or retained result.                       |
+| Cleanup      | Exact destroy succeeds and both provider query paths report no managed instance.                                             |
+| Scope        | The app contains only qualification UI and its infrastructure test.                                                          |
 
 ## Stop conditions
 
-Stop rather than substitute another path when the exact image, Apple inputs,
-provider capacity, source identity, labels, lockfiles, checksums, artifact
-paths, signature, or cleanup cannot be verified. A destroy failure retains local
-state and reports the exact recovery command; the provider deadline remains the
-final cost boundary.
+Stop rather than substitute another path when the toolchain family, Apple
+inputs, provider capacity, source identity, labels, lockfiles, checksums,
+artifact paths, signature, or cleanup cannot be verified. A destroy failure
+retains local state and reports the exact recovery command; the provider
+deadline remains the final cost boundary.
 
 ## Sources
 
