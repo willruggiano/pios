@@ -14,12 +14,11 @@
     cfg = config.pre-commit;
   in {
     devshells = {
-      default.devshell.startup.install-git-hooks.text = config.pre-commit.shellHook;
-      minimal = {
-        packages = [cfg.settings.package];
+      base = {
+        # This startup script configures `pre-commit` (ie. symlinks `.pre-commit-config.yaml`)
         devshell.startup.install-git-hooks.text = config.pre-commit.shellHook;
+        packages = [cfg.settings.package];
       };
-      namespace.devshell.startup.install-git-hooks.text = config.pre-commit.shellHook;
     };
 
     packages.install-pre-commit =

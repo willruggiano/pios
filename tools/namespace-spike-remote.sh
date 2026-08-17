@@ -93,9 +93,9 @@ bootstrap() {
 
   cd "${repo_dir}"
   read -r lock_before _ < <(/usr/bin/shasum -a 256 flake.lock)
-  nix develop .#namespace --command /bin/bash -c \
+  nix develop .#remote --command /bin/bash -c \
     'set -e; command -v pi; command -v pre-commit; command -v treefmt; pi --version'
-  nix develop .#namespace --command make check
+  nix develop .#remote --command make check
   read -r lock_after _ < <(/usr/bin/shasum -a 256 flake.lock)
   [[ ${lock_after} == "${lock_before}" ]]
   verify_source
@@ -107,7 +107,7 @@ reenter() {
   verify_host
   verify_source
   cd "${repo_dir}"
-  nix develop .#namespace --command /bin/bash -c \
+  nix develop .#remote --command /bin/bash -c \
     'set -e; command -v pi; printf "FACT shell_reentry=ok\\n"'
 }
 

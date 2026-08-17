@@ -8,7 +8,7 @@
     lib,
     ...
   }: {
-    devshells.minimal.packages = [config.packages.treefmt];
+    devshells.base.packages = [config.packages.treefmt];
 
     jail.additionalCombinators = cs:
       with cs; [

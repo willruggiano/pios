@@ -60,7 +60,7 @@ Operator:
 nsc ssh "$instance_id"
 cd "$HOME/pios"
 export PATH=/nix/var/nix/profiles/default/bin:$PATH
-nix develop .#namespace
+nix develop .#remote
 pi # /login, /model, /quit
 ```
 
@@ -70,7 +70,7 @@ Controller, once per implementation/review/correction prompt:
 nsc instance upload --mkdir "$instance_id" /tmp/remote-prompt.md \
   /var/tmp/pios-prompts/task.md
 nsc ssh --disable-pty "$instance_id" \
-  'cd "$HOME/pios" && PATH=/nix/var/nix/profiles/default/bin:$PATH nix develop .#namespace --command pi --approve --provider PROVIDER --model MODEL -p @/var/tmp/pios-prompts/task.md "Execute the attached prompt."'
+  'cd "$HOME/pios" && PATH=/nix/var/nix/profiles/default/bin:$PATH nix develop .#remote --command pi --approve --provider PROVIDER --model MODEL -p @/var/tmp/pios-prompts/task.md "Execute the attached prompt."'
 ```
 
 Never expose credentials. Stop for operator Xcode GUI work; never handcraft
