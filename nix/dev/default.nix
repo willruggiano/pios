@@ -32,7 +32,6 @@
           file
           findutils
           gawk
-          git
           gnugrep
           gnumake
           gnused
@@ -41,6 +40,7 @@
           gzip
           inputs'.cpd.packages.default
           jq
+          jujutsu
           less
           nodejs
           patch
@@ -58,7 +58,12 @@
       };
       namespace = {
         motd = lib.mkForce "";
-        packages = config.devshells.minimal.packages ++ [config.packages.pi-unwrapped];
+        packages = with pkgs;
+          config.devshells.minimal.packages
+          ++ [
+            config.packages.pi-unwrapped
+            git
+          ];
       };
     };
 
